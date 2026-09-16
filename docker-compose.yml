@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  faktur-app:
+    build: .
+    container_name: rincian-faktur
+    restart: always
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./data:/app/data
