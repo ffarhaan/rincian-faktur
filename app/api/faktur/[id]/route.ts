@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const invId = decodeURIComponent(params.id);
-    const detail = getInvoiceDetail(invId);
+    const detail = await getInvoiceDetail(invId);
     if (!detail) {
       return NextResponse.json({ error: 'Faktur tidak ditemukan' }, { status: 404 });
     }

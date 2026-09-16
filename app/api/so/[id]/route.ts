@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const soId = decodeURIComponent(params.id);
-    const detail = getSODetail(soId);
+    const detail = await getSODetail(soId);
     if (!detail) {
       return NextResponse.json({ error: 'Sales Order tidak ditemukan' }, { status: 404 });
     }

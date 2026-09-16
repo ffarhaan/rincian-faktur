@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     if (!name) {
       return NextResponse.json({ error: 'Nama pelanggan wajib diisi' }, { status: 400 });
     }
-    const detail = getCustomerDetail(name);
+    const detail = await getCustomerDetail(name);
     if (!detail) {
       return NextResponse.json({ error: 'Pelanggan tidak ditemukan' }, { status: 404 });
     }

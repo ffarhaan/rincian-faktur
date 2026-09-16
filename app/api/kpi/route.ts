@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const data = getKPISummary();
+    const data = await getKPISummary();
     return NextResponse.json(data);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

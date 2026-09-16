@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'tanggal';
     const sortOrder = (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc';
 
-    const result = queryTransactions({
+    const result = await queryTransactions({
       search,
       tahun,
       bulan,
