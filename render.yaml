@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: rincian-faktur
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile

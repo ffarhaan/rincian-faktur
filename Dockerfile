@@ -4,7 +4,6 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 RUN npm run build
-EXPOSE 7860
-ENV PORT=7860
+EXPOSE 3005
 ENV HOSTNAME="0.0.0.0"
-CMD ["npx", "next", "start", "-p", "7860", "-H", "0.0.0.0"]
+CMD ["sh", "-c", "npx next start -p ${PORT:-3005} -H 0.0.0.0"]
