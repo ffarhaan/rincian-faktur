@@ -192,6 +192,27 @@ export default function CustomerModal({
 
   const totalInvoicePages = Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE) || 1;
 
+  // Unique matching invoices in the current items tab
+  const matchingInvoices = useMemo(() => {
+    const invMap = new Map<string, { tanggal: string; count: number; items: any[] }>();
+    for (const it of itemData.items) {
+      if (!it.nomor_faktur) continue;
+      if (!invMap.has(it.nomor_faktur)) {
+        invMap.set(it.nomor_faktur, { tanggal: it.tanggal || '', count: 1, items: [it] });
+      } else {
+        const entry = invMap.get(it.nomor_faktur)!;
+        entry.count += 1;
+        entry.items.push(it);
+      }
+    }
+    return Array.from(invMap.entries()).map(([nomor_faktur, val]) => ({
+      nomor_faktur,
+      tanggal: val.tanggal,
+      count: val.count,
+      items: val.items,
+    }));
+  }, [itemData.items]);
+
   // Toggle Accordion on Product (Tab 2)
   const handleToggleProduct = async (productName: string) => {
     if (expandedProduct === productName) {
@@ -402,44 +423,111 @@ export default function CustomerModal({
                   </div>
                 </div>
 
+                {/* Direct Invoice Link & Top Retur Action Bar (Di Bawah Pencarian) */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-xl">
+                  {/* Left: Quick Direct Invoice Links */}
+                  <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 whitespace-nowrap">
+                      <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>Faktur Terkait (Klik Langsung Buka):</span>
+                    </span>
+                    {matchingInvoices.length > 0 ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {matchingInvoices.slice(0, 5).map((inv) => (
+                          <button
+                            key={inv.nomor_faktur}
+                            type="button"
+                            onClick={() => onSelectInvoice(inv.nomor_faktur)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-bold bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 border border-indigo-200 dark:border-indigo-800 rounded-lg shadow-xs hover:border-indigo-400 transition-all group"
+                            title={`Klik untuk langsung buka faktur ${inv.nomor_faktur}`}
+                          >
+                            <span>{inv.nomor_faktur}</span>
+                            <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                          </button>
+                        ))}
+                        {matchingInvoices.length > 5 && (
+                          <span className="text-[11px] text-slate-400 self-center">
+                            +{matchingInvoices.length - 5} lainnya
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">
+                        Ketik nomor faktur atau nama obat di atas untuk mencari
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Right: Dedicated Retur Action Button at the Top */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetItems = itemData.items.slice(0, 25).map((it: any) => ({
+                        id: it.id,
+                        kode_barang: it.kode_barang || '',
+                        nama_barang: it.nama_barang || '',
+                        satuan: it.satuan || 'PCS',
+                        harga_satuan: Number(it.harga_satuan) || 0,
+                        qty_beli: Number(it.kuantitas) || 1,
+                        qty_retur: 1,
+                        nomor_faktur: it.nomor_faktur || '',
+                        tanggal: it.tanggal || '',
+                      }));
+                      setSelectedReturInvoice(matchingInvoices[0]?.nomor_faktur || '');
+                      setSelectedReturDate(matchingInvoices[0]?.tanggal || '');
+                      setReturItems(targetItems);
+                      setIsReturOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all ml-auto"
+                    title="Buka Kalkulator & Pengajuan Retur untuk item ini"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Kalkulator &amp; Pengajuan Retur</span>
+                    {itemData.items.length > 0 && (
+                      <span className="px-1.5 py-0.2 text-[10px] bg-white/20 rounded-full font-mono">
+                        {itemData.items.length} item
+                      </span>
+                    )}
+                  </button>
+                </div>
+
                 {/* Direct Ref INV & Price Items Table */}
                 <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-950/50 shadow-sm">
-                  <div className="max-h-[420px] overflow-y-auto">
-                    <table className="w-full text-xs text-left">
-                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 select-none">
-                        <tr>
-                          <th className="py-2.5 px-3">No. Faktur (Ref INV)</th>
-                          <th className="py-2.5 px-3">Tanggal</th>
-                          <th className="py-2.5 px-3">Kode Barang</th>
-                          <th className="py-2.5 px-3">Nama Obat / Barang</th>
-                          <th className="py-2.5 px-3 text-right">Qty Beli</th>
-                          <th className="py-2.5 px-3">Satuan</th>
-                          <th className="py-2.5 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold">
+                  <div className="max-h-[440px] overflow-y-auto overflow-x-auto">
+                    <table className="w-full min-w-[1350px] text-xs text-left border-collapse border border-slate-200 dark:border-slate-800">
+                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 select-none">
+                        <tr className="divide-x divide-slate-200 dark:divide-slate-800">
+                          <th className="py-2.5 px-3 min-w-[170px]">No. Faktur (Ref INV)</th>
+                          <th className="py-2.5 px-3 min-w-[105px]">Tanggal</th>
+                          <th className="py-2.5 px-3 min-w-[120px]">Kode Barang</th>
+                          <th className="py-2.5 px-3 min-w-[240px]">Nama Obat / Barang</th>
+                          <th className="py-2.5 px-3 text-right min-w-[80px]">Qty Beli</th>
+                          <th className="py-2.5 px-3 min-w-[70px]">Satuan</th>
+                          <th className="py-2.5 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold min-w-[130px]">
                             Harga Satuan (Hit Retur)
                           </th>
-                          <th className="py-2.5 px-3 text-right">Total Nilai (DPP)</th>
-                          <th className="py-2.5 px-3 text-right font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                          <th className="py-2.5 px-3 text-right min-w-[130px]">Total Nilai (DPP)</th>
+                          <th className="py-2.5 px-3 text-right font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap min-w-[110px]">
                             PPN 11%
                           </th>
-                          <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold">
+                          <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 font-bold min-w-[145px]">
                             Grand Total (+PPN 11%)
                           </th>
-                          <th className="py-2.5 px-3 text-center">Tipe</th>
-                          <th className="py-2.5 px-3">No. SO</th>
-                          <th className="py-2.5 px-3 text-center">Aksi Retur</th>
+                          <th className="py-2.5 px-3 text-center min-w-[75px]">Tipe</th>
+                          <th className="py-2.5 px-3 min-w-[160px]">No. SO</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                         {loadingItems ? (
                           <tr>
-                            <td colSpan={13} className="py-16 text-center text-slate-400">
+                            <td colSpan={12} className="py-16 text-center text-slate-400">
                               <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto mb-2" />
                               <span>Mencari rincian faktur &amp; harga satuan...</span>
                             </td>
                           </tr>
                         ) : itemData.items.length === 0 ? (
                           <tr>
-                            <td colSpan={13} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                            <td colSpan={12} className="py-12 text-center text-slate-400 dark:text-slate-500">
                               {itemSearch
                                 ? `Tidak ada transaksi yang cocok dengan kata kunci "${itemSearch}"`
                                 : 'Tidak ada riwayat pembelian untuk apotek ini.'}
@@ -454,9 +542,9 @@ export default function CustomerModal({
                             return (
                               <tr
                                 key={it.id}
-                                className={`transition-colors ${
+                                className={`divide-x divide-slate-200 dark:divide-slate-800 transition-colors ${
                                   isRetur
-                                    ? 'bg-rose-50/50 dark:bg-rose-950/20 hover:bg-rose-100/50 dark:hover:bg-rose-950/40'
+                                    ? 'bg-rose-50/60 dark:bg-rose-950/20 hover:bg-rose-100/50 dark:hover:bg-rose-950/40'
                                     : 'hover:bg-indigo-50/40 dark:hover:bg-slate-850/60'
                                 }`}
                               >
@@ -469,7 +557,7 @@ export default function CustomerModal({
                                     title="Klik untuk membuka detail faktur ini"
                                   >
                                     <span>{it.nomor_faktur}</span>
-                                    <ExternalLink className="w-3 h-3 text-indigo-500" />
+                                    <ExternalLink className="w-3 h-3 text-indigo-500 flex-shrink-0" />
                                   </button>
                                 </td>
 
@@ -488,7 +576,7 @@ export default function CustomerModal({
                                   <button
                                     type="button"
                                     onClick={() => onSelectProduct(it.nama_barang)}
-                                    className="font-medium text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline text-left"
+                                    className="font-medium text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline text-left break-words"
                                     title="Lihat riwayat obat ini"
                                   >
                                     {cleanHtml(it.nama_barang)}
@@ -506,7 +594,7 @@ export default function CustomerModal({
                                 </td>
 
                                 {/* Harga Satuan (HIGHLIGHTED FOR RETUR HIT) */}
-                                <td className="py-2 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-mono font-bold text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
+                                <td className="py-2 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-mono font-bold text-emerald-800 dark:text-emerald-300 whitespace-nowrap">
                                   Rp {(Number(it.harga_satuan) || 0).toLocaleString('id-ID')}
                                 </td>
 
@@ -530,8 +618,8 @@ export default function CustomerModal({
 
                                 {/* Grand Total (+PPN 11%) */}
                                 <td
-                                  className={`py-2 px-3 text-right font-mono font-bold whitespace-nowrap bg-indigo-500/5 dark:bg-indigo-950/20 ${
-                                    isRetur ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                                  className={`py-2 px-3 text-right font-mono font-bold whitespace-nowrap bg-indigo-500/10 dark:bg-indigo-950/30 ${
+                                    isRetur ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-900 dark:text-emerald-300'
                                   }`}
                                 >
                                   Rp {itemGrand.toLocaleString('id-ID')}
@@ -567,35 +655,6 @@ export default function CustomerModal({
                                   ) : (
                                     '-'
                                   )}
-                                </td>
-
-                                {/* Aksi Retur */}
-                                <td className="py-2 px-3 text-center whitespace-nowrap">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedReturInvoice(it.nomor_faktur || '');
-                                      setSelectedReturDate(it.tanggal || '');
-                                      setReturItems([
-                                        {
-                                          kode_barang: it.kode_barang || '',
-                                          nama_barang: it.nama_barang || '',
-                                          satuan: it.satuan || 'PCS',
-                                          harga_satuan: Number(it.harga_satuan) || 0,
-                                          qty_beli: Number(it.kuantitas) || 1,
-                                          qty_retur: 1,
-                                          nomor_faktur: it.nomor_faktur || '',
-                                          tanggal: it.tanggal || '',
-                                        },
-                                      ]);
-                                      setIsReturOpen(true);
-                                    }}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors shadow-xs"
-                                    title="Hitung & Buat Slip Retur untuk item ini"
-                                  >
-                                    <RotateCcw className="w-3 h-3 text-rose-500" />
-                                    <span>Retur</span>
-                                  </button>
                                 </td>
                               </tr>
                             );

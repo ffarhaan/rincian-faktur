@@ -88,6 +88,20 @@ export default function OmniSearch({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => { if (query.trim().length >= 2) setIsOpen(true); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              if (results.invoices.length > 0) {
+                onSelectInvoice(results.invoices[0].nomor_faktur);
+                setIsOpen(false);
+              } else if (results.customers.length > 0) {
+                onSelectCustomer(results.customers[0].nama_pelanggan);
+                setIsOpen(false);
+              } else if (results.products.length > 0) {
+                onSelectProduct(results.products[0].nama_barang);
+                setIsOpen(false);
+              }
+            }
+          }}
           placeholder="Cari No Faktur, No SO, Nama Obat, atau Nama Apotek (2024-2026)..."
           className="w-full pl-12 pr-10 py-3.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none shadow-md dark:shadow-xl dark:shadow-black/40 transition-all"
         />
@@ -106,6 +120,32 @@ export default function OmniSearch({
       {/* Results Dropdown */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/80 overflow-hidden z-50 max-h-[75vh] overflow-y-auto backdrop-blur-md">
+          {/* Quick 1-Click Fast Match Action when Invoice is detected */}
+          {results.invoices.length > 0 && (
+            <div className="p-2.5 bg-indigo-50/90 dark:bg-indigo-950/80 border-b border-indigo-100 dark:border-indigo-900/60 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                </span>
+                <span className="text-xs font-bold text-indigo-950 dark:text-indigo-100">
+                  Faktur Ditemukan: <span className="font-mono text-indigo-600 dark:text-indigo-400 underline">{results.invoices[0].nomor_faktur}</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectInvoice(results.invoices[0].nomor_faktur);
+                  setIsOpen(false);
+                }}
+                className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+              >
+                <span>Buka Faktur (Enter)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {!hasAnyResults && !loading && (
             <div className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
               Tidak ada data yang cocok dengan &quot;<span className="text-slate-800 dark:text-slate-200 font-semibold">{query}</span>&quot;
