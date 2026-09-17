@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Database, RefreshCw, Sun, Moon } from 'lucide-react';
+import { Database, RefreshCw, Sun, Moon, RotateCcw } from 'lucide-react';
 import OmniSearch from '@/components/OmniSearch';
 import KPICards from '@/components/KPICards';
 import TransactionTable from '@/components/TransactionTable';
@@ -9,6 +9,7 @@ import InvoiceModal from '@/components/InvoiceModal';
 import SOModal from '@/components/SOModal';
 import MedicineModal from '@/components/MedicineModal';
 import CustomerModal from '@/components/CustomerModal';
+import ReturCalculatorModal from '@/components/ReturCalculatorModal';
 
 export default function Home() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -39,6 +40,7 @@ export default function Home() {
   const [activeSO, setActiveSO] = useState<string | null>(null);
   const [activeProduct, setActiveProduct] = useState<string | null>(null);
   const [activeCustomer, setActiveCustomer] = useState<string | null>(null);
+  const [isGlobalReturOpen, setIsGlobalReturOpen] = useState(false);
 
   // Theme initialization from localStorage
   useEffect(() => {
@@ -178,13 +180,29 @@ export default function Home() {
       {/* Main Container */}
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 flex-1 flex flex-col">
         {/* Omnibar Universal Search */}
-        <section className="py-2">
+        <section className="py-2 space-y-2">
           <OmniSearch
             onSelectInvoice={(inv) => setActiveInvoice(inv)}
             onSelectSO={(so) => setActiveSO(so)}
             onSelectProduct={(prod) => setActiveProduct(prod)}
             onSelectCustomer={(cust) => setActiveCustomer(cust)}
           />
+
+          {/* Dedicated Quick Action Bar Di Bawah Pencarian */}
+          <div className="flex flex-wrap items-center justify-between gap-3 max-w-2xl mx-auto px-2">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <span>💡</span>
+              <span>Ketik No. Faktur / Apotek / Obat di atas untuk langsung membuka detail &amp; link</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsGlobalReturOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 dark:bg-rose-950/70 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-xl text-xs font-bold transition-all shadow-xs ml-auto"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+              <span>Kalkulator &amp; Pengajuan Retur</span>
+            </button>
+          </div>
         </section>
 
         {/* KPI Dashboard Cards */}
@@ -234,6 +252,7 @@ export default function Home() {
           onSelectSO={(so) => { setActiveInvoice(null); setActiveSO(so); }}
           onSelectCustomer={(cust) => { setActiveInvoice(null); setActiveCustomer(cust); }}
           onSelectProduct={(prod) => { setActiveInvoice(null); setActiveProduct(prod); }}
+          onSelectInvoice={(inv) => setActiveInvoice(inv)}
         />
       )}
 
@@ -266,6 +285,24 @@ export default function Home() {
           onSelectSO={(so) => { setActiveCustomer(null); setActiveSO(so); }}
         />
       )}
+
+      {/* Global Retur Calculator Modal */}
+      <ReturCalculatorModal
+        isOpen={isGlobalReturOpen}
+        onClose={() => setIsGlobalReturOpen(false)}
+        customerName=""
+        invoiceNumber=""
+        invoiceDate=""
+        items={[]}
+        onSelectInvoice={(inv) => {
+          setIsGlobalReturOpen(false);
+          setActiveInvoice(inv);
+        }}
+        onSelectProduct={(prod) => {
+          setIsGlobalReturOpen(false);
+          setActiveProduct(prod);
+        }}
+      />
     </main>
   );
 }
