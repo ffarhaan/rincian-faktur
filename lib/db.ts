@@ -436,3 +436,28 @@ export async function getCustomerDetail(namaPelanggan: string) {
     invoices: invoiceListRes.rows
   };
 }
+
+// 8. Detailed Medicine Invoices for a specific Customer
+export async function getProductCustomerInvoices(namaBarang: string, namaPelanggan: string) {
+  const client = getClient();
+  const res = await client.execute({
+    sql: `SELECT
+            id,
+            nomor_faktur,
+            no_so,
+            tanggal,
+            kuantitas,
+            satuan,
+            harga_satuan,
+            total_harga,
+            is_retur,
+            keterangan
+          FROM transactions
+          WHERE nama_barang = ? AND nama_pelanggan = ?
+          ORDER BY tanggal DESC, id DESC`,
+    args: [namaBarang, namaPelanggan]
+  });
+
+  return res.rows;
+}
+
