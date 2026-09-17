@@ -264,6 +264,9 @@ export default function TransactionTable({
                     <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                   </div>
                 </th>
+                <th className="py-3 px-3 text-right font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                  PPN 11%
+                </th>
                 <th className="py-3 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 font-bold whitespace-nowrap">
                   Grand Total (+PPN 11%)
                 </th>
@@ -274,14 +277,14 @@ export default function TransactionTable({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={12} className="py-16 text-center text-slate-400">
+                  <td colSpan={13} className="py-16 text-center text-slate-400">
                     <div className="inline-block animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full mb-2" />
                     <p className="text-xs">Memuat data dari database...</p>
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="py-16 text-center text-slate-400 text-xs">
+                  <td colSpan={13} className="py-16 text-center text-slate-400 text-xs">
                     Tidak ada data transaksi yang ditemukan.
                   </td>
                 </tr>
@@ -289,6 +292,7 @@ export default function TransactionTable({
                 rows.map((r) => {
                   const isRetur = r.is_retur === 1;
                   const subtotal = Number(r.total_harga) || 0;
+                  const ppn = Math.round(subtotal * 0.11);
                   const grandTotal = Math.round(subtotal * 1.11);
                   return (
                     <tr
@@ -363,6 +367,11 @@ export default function TransactionTable({
                       {/* Total Harga (DPP) */}
                       <td className={`py-2.5 px-3 text-right font-semibold whitespace-nowrap ${isRetur ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
                         Rp {subtotal.toLocaleString('id-ID')}
+                      </td>
+
+                      {/* PPN 11% */}
+                      <td className={`py-2.5 px-3 text-right font-mono text-xs whitespace-nowrap ${isRetur ? 'text-rose-500 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                        Rp {ppn.toLocaleString('id-ID')}
                       </td>
 
                       {/* Grand Total (Inc. PPN 11%) */}

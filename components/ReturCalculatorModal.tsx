@@ -269,6 +269,9 @@ export default function ReturCalculatorModal({
                     Harga Satuan Ref INV
                   </th>
                   <th className="py-2.5 px-3 text-right">Subtotal (DPP)</th>
+                  <th className="py-2.5 px-3 text-right font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                    PPN 11%
+                  </th>
                   <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold">
                     Grand Total (+PPN 11%)
                   </th>
@@ -278,13 +281,14 @@ export default function ReturCalculatorModal({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
                 {returList.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center text-slate-400 dark:text-slate-500">
+                    <td colSpan={9} className="py-10 text-center text-slate-400 dark:text-slate-500">
                       Belum ada item yang dipilih untuk retur.
                     </td>
                   </tr>
                 ) : (
                   returList.map((it, idx) => {
                     const subtotal = Number(it.qty_retur || 0) * Number(it.harga_satuan || 0);
+                    const itemPpn = Math.round(subtotal * 0.11);
                     const grandItem = Math.round(subtotal * 1.11);
                     return (
                       <tr key={it.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors">
@@ -356,6 +360,11 @@ export default function ReturCalculatorModal({
                           Rp {Math.round(subtotal).toLocaleString('id-ID')}
                         </td>
 
+                        {/* PPN 11% */}
+                        <td className="py-2.5 px-3 text-right font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                          Rp {itemPpn.toLocaleString('id-ID')}
+                        </td>
+
                         {/* Grand Total Retur (+PPN 11%) */}
                         <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap bg-indigo-500/5 dark:bg-indigo-950/20">
                           Rp {grandItem.toLocaleString('id-ID')}
@@ -385,9 +394,12 @@ export default function ReturCalculatorModal({
                   <td className="py-2.5 px-3 text-center font-bold text-indigo-600 dark:text-indigo-400">
                     {totalQtyRetur} Unit ({returList.length} Item)
                   </td>
-                  <td className="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400 text-xs">Subtotal (DPP):</td>
+                  <td className="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400 text-xs">Total:</td>
                   <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200">
                     Rp {Math.round(totalNominalRetur).toLocaleString('id-ID')}
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono text-xs text-slate-500 dark:text-slate-400">
+                    Rp {ppnTotal.toLocaleString('id-ID')}
                   </td>
                   <td className="py-2.5 px-3 text-right font-mono text-base font-extrabold text-rose-600 dark:text-rose-400">
                     Rp {grandTotalAll.toLocaleString('id-ID')}
@@ -395,14 +407,10 @@ export default function ReturCalculatorModal({
                   <td></td>
                 </tr>
                 <tr className="border-t border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
-                  <td colSpan={5} className="py-2 px-3 text-right">PPN 11%:</td>
-                  <td className="py-2 px-3 text-right font-mono">
-                    Rp {ppnTotal.toLocaleString('id-ID')}
+                  <td colSpan={7} className="py-2 px-3 text-right">Grand Total Retur Termasuk PPN 11%:</td>
+                  <td colSpan={2} className="py-2 px-3 text-right font-bold font-mono text-rose-600 dark:text-rose-400 text-sm">
+                    Rp {grandTotalAll.toLocaleString('id-ID')}
                   </td>
-                  <td className="py-2 px-3 text-right font-bold text-indigo-600 dark:text-indigo-400">
-                    (Termasuk PPN 11%)
-                  </td>
-                  <td></td>
                 </tr>
               </tfoot>
             </table>

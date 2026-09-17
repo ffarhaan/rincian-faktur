@@ -418,6 +418,9 @@ export default function CustomerModal({
                             Harga Satuan (Hit Retur)
                           </th>
                           <th className="py-2.5 px-3 text-right">Total Nilai (DPP)</th>
+                          <th className="py-2.5 px-3 text-right font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                            PPN 11%
+                          </th>
                           <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold">
                             Grand Total (+PPN 11%)
                           </th>
@@ -429,14 +432,14 @@ export default function CustomerModal({
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
                         {loadingItems ? (
                           <tr>
-                            <td colSpan={12} className="py-16 text-center text-slate-400">
+                            <td colSpan={13} className="py-16 text-center text-slate-400">
                               <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto mb-2" />
                               <span>Mencari rincian faktur &amp; harga satuan...</span>
                             </td>
                           </tr>
                         ) : itemData.items.length === 0 ? (
                           <tr>
-                            <td colSpan={12} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                            <td colSpan={13} className="py-12 text-center text-slate-400 dark:text-slate-500">
                               {itemSearch
                                 ? `Tidak ada transaksi yang cocok dengan kata kunci "${itemSearch}"`
                                 : 'Tidak ada riwayat pembelian untuk apotek ini.'}
@@ -446,6 +449,7 @@ export default function CustomerModal({
                           itemData.items.map((it: any) => {
                             const isRetur = Number(it.is_retur) === 1;
                             const itemDpp = Number(it.total_harga) || 0;
+                            const itemPpn = Math.round(itemDpp * 0.11);
                             const itemGrand = Math.round(itemDpp * 1.11);
                             return (
                               <tr
@@ -513,6 +517,15 @@ export default function CustomerModal({
                                   }`}
                                 >
                                   Rp {itemDpp.toLocaleString('id-ID')}
+                                </td>
+
+                                {/* PPN 11% */}
+                                <td
+                                  className={`py-2 px-3 text-right font-mono text-xs whitespace-nowrap ${
+                                    isRetur ? 'text-rose-500 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'
+                                  }`}
+                                >
+                                  Rp {itemPpn.toLocaleString('id-ID')}
                                 </td>
 
                                 {/* Grand Total (+PPN 11%) */}
@@ -961,6 +974,9 @@ export default function CustomerModal({
                           <th className="py-2.5 px-3">Tanggal</th>
                           <th className="py-2.5 px-3 text-right">Items</th>
                           <th className="py-2.5 px-3 text-right">Total (DPP)</th>
+                          <th className="py-2.5 px-3 text-right font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                            PPN 11%
+                          </th>
                           <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold">
                             Grand Total (+PPN 11%)
                           </th>
@@ -970,7 +986,7 @@ export default function CustomerModal({
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
                         {paginatedInvoices.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500">
+                            <td colSpan={8} className="py-8 text-center text-slate-400 dark:text-slate-500">
                               Faktur tidak ditemukan dengan kata kunci &quot;{invoiceSearch}&quot;
                             </td>
                           </tr>
@@ -1011,6 +1027,9 @@ export default function CustomerModal({
                               <td className="py-2 px-3 text-right text-slate-600 dark:text-slate-300">{inv.item_count} item</td>
                               <td className="py-2 px-3 text-right text-slate-700 dark:text-slate-300 font-semibold whitespace-nowrap">
                                 Rp {(inv.total_amount || 0).toLocaleString('id-ID')}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                Rp {Math.round((inv.total_amount || 0) * 0.11).toLocaleString('id-ID')}
                               </td>
                               <td className="py-2 px-3 text-right text-emerald-600 dark:text-emerald-400 font-mono font-bold whitespace-nowrap bg-indigo-500/5 dark:bg-indigo-950/20">
                                 Rp {Math.round((inv.total_amount || 0) * 1.11).toLocaleString('id-ID')}

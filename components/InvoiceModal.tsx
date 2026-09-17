@@ -231,6 +231,9 @@ export default function InvoiceModal({
                           Harga Satuan (Ref INV)
                         </th>
                         <th className="py-2.5 px-3 text-right">Subtotal (DPP)</th>
+                        <th className="py-2.5 px-3 text-right font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                          PPN 11%
+                        </th>
                         <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold">
                           Grand Total (+PPN 11%)
                         </th>
@@ -240,6 +243,7 @@ export default function InvoiceModal({
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
                       {data.items?.map((it: any, idx: number) => {
                         const itemSubtotal = Number(it.total_harga) || 0;
+                        const itemPpn = Math.round(itemSubtotal * 0.11);
                         const itemGrandTotal = Math.round(itemSubtotal * 1.11);
                         return (
                           <tr key={it.id || idx} className="hover:bg-slate-100/60 dark:hover:bg-slate-900/60 transition-colors">
@@ -262,6 +266,9 @@ export default function InvoiceModal({
                             </td>
                             <td className={`py-2 px-3 text-right font-semibold whitespace-nowrap ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
                               Rp {itemSubtotal.toLocaleString('id-ID')}
+                            </td>
+                            <td className={`py-2 px-3 text-right font-mono text-xs whitespace-nowrap ${it.total_harga < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                              Rp {itemPpn.toLocaleString('id-ID')}
                             </td>
                             <td className={`py-2 px-3 text-right font-mono font-bold whitespace-nowrap bg-indigo-500/5 dark:bg-indigo-950/20 ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                               Rp {itemGrandTotal.toLocaleString('id-ID')}
@@ -290,18 +297,18 @@ export default function InvoiceModal({
                         <td className="py-2.5 px-3 text-right font-semibold text-slate-800 dark:text-slate-200">
                           Rp {(data.total_nominal || 0).toLocaleString('id-ID')}
                         </td>
+                        <td className="py-2.5 px-3 text-right font-mono text-xs text-slate-600 dark:text-slate-400">
+                          Rp {Math.round((data.total_nominal || 0) * 0.11).toLocaleString('id-ID')}
+                        </td>
                         <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 font-extrabold text-sm whitespace-nowrap">
                           Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
                         </td>
                         <td></td>
                       </tr>
                       <tr className="border-t border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
-                        <td colSpan={6} className="py-2 px-3 text-right">PPN 11%:</td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          Rp {Math.round((data.total_nominal || 0) * 0.11).toLocaleString('id-ID')}
-                        </td>
-                        <td className="py-2 px-3 text-right font-bold text-indigo-600 dark:text-indigo-400">
-                          (Termasuk PPN 11%)
+                        <td colSpan={7} className="py-2 px-3 text-right">Grand Total Faktur Termasuk PPN 11%:</td>
+                        <td colSpan={2} className="py-2 px-3 text-right font-bold font-mono text-indigo-600 dark:text-indigo-400 text-sm">
+                          Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
                         </td>
                         <td></td>
                       </tr>
