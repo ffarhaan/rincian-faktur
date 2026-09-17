@@ -8,12 +8,10 @@ import {
   Building2,
   Calendar,
   Loader2,
-  RotateCcw,
   ExternalLink,
-  ChevronRight,
   Receipt,
+  CheckCircle2,
 } from 'lucide-react';
-import ReturCalculatorModal, { ReturItem } from './ReturCalculatorModal';
 
 interface InvoiceModalProps {
   invoiceNumber: string | null;
@@ -45,14 +43,9 @@ export default function InvoiceModal({
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // Retur Modal state
-  const [isReturOpen, setIsReturOpen] = useState(false);
-  const [returItems, setReturItems] = useState<ReturItem[]>([]);
-
   useEffect(() => {
     if (!invoiceNumber) return;
     setLoading(true);
-    setIsReturOpen(false);
     fetch(`/api/faktur/${encodeURIComponent(invoiceNumber)}`)
       .then((res) => res.json())
       .then((json) => setData(json))
@@ -62,54 +55,18 @@ export default function InvoiceModal({
 
   if (!invoiceNumber) return null;
 
-  // Trigger retur calculation for all items in invoice
-  const handleOpenFullRetur = () => {
-    if (!data?.items) return;
-    const items: ReturItem[] = data.items.map((it: any) => ({
-      id: it.id,
-      kode_barang: it.kode_barang,
-      nama_barang: it.nama_barang,
-      satuan: it.satuan,
-      harga_satuan: Number(it.harga_satuan) || 0,
-      qty_beli: Math.abs(Number(it.kuantitas) || 0),
-      qty_retur: 1,
-      nomor_faktur: invoiceNumber,
-      tanggal: data.tanggal,
-    }));
-    setReturItems(items);
-    setIsReturOpen(true);
-  };
-
-  // Trigger retur calculation for single item
-  const handleOpenSingleItemRetur = (it: any) => {
-    const item: ReturItem = {
-      id: it.id,
-      kode_barang: it.kode_barang,
-      nama_barang: it.nama_barang,
-      satuan: it.satuan,
-      harga_satuan: Number(it.harga_satuan) || 0,
-      qty_beli: Math.abs(Number(it.kuantitas) || 0),
-      qty_retur: 1,
-      nomor_faktur: invoiceNumber,
-      tanggal: data?.tanggal,
-    };
-    setReturItems([item]);
-    setIsReturOpen(true);
-  };
-
   return (
-    <>
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
           <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-500/20">
+              <div className="p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-500/20">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 font-mono">{invoiceNumber}</h2>
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 font-mono tracking-tight">{invoiceNumber}</h2>
                   {data?.is_retur ? (
                     <span className="px-2 py-0.5 text-xs font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded">
                       RETUR
@@ -125,29 +82,17 @@ export default function InvoiceModal({
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Rincian Faktur Penjualan &amp; Referensi Harga Satuan</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Rincian Faktur Penjualan &amp; Harga Satuan (Termasuk PPN 11%)</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Button: Buat / Hitung Retur */}
-              <button
-                onClick={handleOpenFullRetur}
-                className="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900 transition-colors flex items-center gap-1.5 shadow-sm"
-                title="Hitung nilai retur untuk barang di faktur ini"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                <span>Hitung Retur Faktur Ini</span>
-              </button>
-
-              <button
-                onClick={onClose}
-                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                title="Tutup (Esc)"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Tutup (Esc)"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Content */}
@@ -168,7 +113,7 @@ export default function InvoiceModal({
                     onClick={() => onSelectCustomer(data.nama_pelanggan)}
                     className="font-bold text-slate-800 dark:text-slate-100 text-sm hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1.5 mt-1 transition-colors text-left"
                   >
-                    <Building2 className="w-4 h-4 text-sky-500" />
+                    <Building2 className="w-4 h-4 text-sky-500 flex-shrink-0" />
                     <span>{cleanHtml(data.nama_pelanggan)}</span>
                     <ExternalLink className="w-3 h-3 text-slate-400 inline" />
                   </button>
@@ -201,137 +146,113 @@ export default function InvoiceModal({
                     Tanggal Transaksi
                   </span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-1.5 mt-1 font-mono">
-                    <Calendar className="w-4 h-4 text-slate-400" />
+                    <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
                     {data.tanggal}
                   </span>
                 </div>
               </div>
 
-              {/* Items Table */}
+              {/* Items Table Section */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Daftar Obat / Item ({data.items?.length || 0})
+                <div className="flex items-center justify-between mb-2.5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <span>Daftar Barang &amp; Harga (+PPN 11%)</span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 rounded-full font-mono">
+                      {data.items?.length || 0} item
+                    </span>
                   </h3>
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    Klik tombol <strong>Retur</strong> pada baris untuk menghitung pengembalian satuan obat.
+                    Semua harga satuan &amp; total di bawah sudah dihitung dengan PPN 11%
                   </span>
                 </div>
 
-                {/* Top Quick Actions Bar for Retur */}
-              <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-rose-50/60 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 rounded-xl mb-3">
-                <div className="flex items-center gap-2">
-                  <RotateCcw className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Pengajuan &amp; Kalkulator Retur Faktur Ini
-                    </h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Hitung nilai retur otomatis berdasarkan harga satuan faktur ({data.items?.length || 0} item terdaftar)
-                    </p>
+                {/* Items Table with Grid Lines */}
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-950/50 shadow-sm">
+                  <div className="overflow-x-auto max-h-[420px]">
+                    <table className="w-full min-w-[980px] text-xs text-left border-collapse border border-slate-200 dark:border-slate-800">
+                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 select-none">
+                        <tr className="divide-x divide-slate-200 dark:divide-slate-800">
+                          <th className="py-2.5 px-3 w-10 text-center">No</th>
+                          <th className="py-2.5 px-3 min-w-[120px]">Kode Barang</th>
+                          <th className="py-2.5 px-3 min-w-[240px]">Nama Obat / Barang</th>
+                          <th className="py-2.5 px-3 text-right min-w-[75px]">Qty Beli</th>
+                          <th className="py-2.5 px-3 min-w-[70px]">Satuan</th>
+                          <th className="py-2.5 px-3 text-right min-w-[125px]">Harga Satuan (DPP)</th>
+                          <th className="py-2.5 px-3 text-right bg-emerald-500/15 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-bold min-w-[150px]">
+                            Harga Satuan (+PPN 11%)
+                          </th>
+                          <th className="py-2.5 px-3 text-right min-w-[125px]">Subtotal (DPP)</th>
+                          <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 font-bold whitespace-nowrap min-w-[150px]">
+                            Grand Total (+PPN 11%)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                        {data.items?.map((it: any, idx: number) => {
+                          const unitDpp = Number(it.harga_satuan) || 0;
+                          const unitIncPpn = Math.round(unitDpp * 1.11);
+                          const subtotalDpp = Number(it.total_harga) || 0;
+                          const grandTotalIncPpn = Math.round(subtotalDpp * 1.11);
+
+                          return (
+                            <tr
+                              key={it.id || idx}
+                              className={`divide-x divide-slate-200 dark:divide-slate-800 hover:bg-indigo-50/40 dark:hover:bg-slate-850/60 transition-colors ${
+                                it.kuantitas < 0 ? 'bg-rose-50/60 dark:bg-rose-950/20' : ''
+                              }`}
+                            >
+                              <td className="py-2.5 px-3 text-center text-slate-400 dark:text-slate-500">{idx + 1}</td>
+                              <td className="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">{it.kode_barang || '-'}</td>
+                              <td className="py-2.5 px-3">
+                                <button
+                                  onClick={() => onSelectProduct(it.nama_barang)}
+                                  className="text-left font-semibold text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline transition-colors break-words"
+                                >
+                                  {cleanHtml(it.nama_barang)}
+                                </button>
+                              </td>
+                              <td className={`py-2.5 px-3 text-right font-bold ${it.kuantitas < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                                {it.kuantitas}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">{it.satuan}</td>
+                              <td className="py-2.5 px-3 text-right font-mono text-slate-600 dark:text-slate-300">
+                                Rp {unitDpp.toLocaleString('id-ID')}
+                              </td>
+                              <td className="py-2.5 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-mono font-bold text-emerald-800 dark:text-emerald-300 whitespace-nowrap">
+                                Rp {unitIncPpn.toLocaleString('id-ID')}
+                              </td>
+                              <td className={`py-2.5 px-3 text-right font-semibold whitespace-nowrap ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                                Rp {subtotalDpp.toLocaleString('id-ID')}
+                              </td>
+                              <td className={`py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap bg-indigo-500/10 dark:bg-indigo-950/30 ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-900 dark:text-emerald-300'}`}>
+                                Rp {grandTotalIncPpn.toLocaleString('id-ID')}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot className="bg-slate-100 dark:bg-slate-950 font-semibold border-t border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
+                        <tr className="divide-x divide-slate-200 dark:divide-slate-800">
+                          <td colSpan={3} className="py-2.5 px-3 text-right">Total Fisik:</td>
+                          <td className="py-2.5 px-3 text-right text-indigo-600 dark:text-indigo-300 font-bold">{data.total_qty}</td>
+                          <td colSpan={3} className="py-2.5 px-3 text-right text-slate-600 dark:text-slate-400">Total Faktur (DPP):</td>
+                          <td className="py-2.5 px-3 text-right font-semibold text-slate-800 dark:text-slate-200">
+                            Rp {(data.total_nominal || 0).toLocaleString('id-ID')}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 font-extrabold text-sm whitespace-nowrap bg-emerald-500/10 dark:bg-emerald-950/40">
+                            Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
+                          </td>
+                        </tr>
+                        <tr className="border-t border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
+                          <td colSpan={7} className="py-2 px-3 text-right">Grand Total Faktur (Sudah Termasuk PPN 11%):</td>
+                          <td colSpan={2} className="py-2 px-3 text-right font-bold font-mono text-indigo-600 dark:text-indigo-400 text-sm">
+                            Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleOpenFullRetur}
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Buka Form Retur Faktur Ini</span>
-                </button>
-              </div>
-
-              {/* Items Table with Grid Lines */}
-              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-950/50 shadow-sm">
-                <div className="overflow-x-auto max-h-[380px]">
-                  <table className="w-full min-w-[950px] text-xs text-left border-collapse border border-slate-200 dark:border-slate-800">
-                    <thead className="bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 select-none">
-                      <tr className="divide-x divide-slate-200 dark:divide-slate-800">
-                        <th className="py-2.5 px-3 w-10">No</th>
-                        <th className="py-2.5 px-3 min-w-[120px]">Kode Barang</th>
-                        <th className="py-2.5 px-3 min-w-[240px]">Nama Obat / Barang</th>
-                        <th className="py-2.5 px-3 text-right min-w-[70px]">Qty</th>
-                        <th className="py-2.5 px-3 min-w-[70px]">Satuan</th>
-                        <th className="py-2.5 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold min-w-[130px]">
-                          Harga Satuan (DPP)
-                        </th>
-                        <th className="py-2.5 px-3 text-right min-w-[130px]">Subtotal (DPP)</th>
-                        <th className="py-2.5 px-3 text-right font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap min-w-[110px]">
-                          PPN 11%
-                        </th>
-                        <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 font-bold whitespace-nowrap min-w-[145px]">
-                          Grand Total (+PPN 11%)
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                      {data.items?.map((it: any, idx: number) => {
-                        const itemSubtotal = Number(it.total_harga) || 0;
-                        const itemPpn = Math.round(itemSubtotal * 0.11);
-                        const itemGrandTotal = Math.round(itemSubtotal * 1.11);
-                        return (
-                          <tr
-                            key={it.id || idx}
-                            className={`divide-x divide-slate-200 dark:divide-slate-800 hover:bg-indigo-50/40 dark:hover:bg-slate-850/60 transition-colors ${
-                              it.kuantitas < 0 ? 'bg-rose-50/60 dark:bg-rose-950/20' : ''
-                            }`}
-                          >
-                            <td className="py-2 px-3 text-slate-400 dark:text-slate-500">{idx + 1}</td>
-                            <td className="py-2 px-3 font-mono text-slate-500 dark:text-slate-400">{it.kode_barang || '-'}</td>
-                            <td className="py-2 px-3">
-                              <button
-                                onClick={() => onSelectProduct(it.nama_barang)}
-                                className="text-left font-semibold text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline transition-colors break-words"
-                              >
-                                {cleanHtml(it.nama_barang)}
-                              </button>
-                            </td>
-                            <td className={`py-2 px-3 text-right font-bold ${it.kuantitas < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                              {it.kuantitas}
-                            </td>
-                            <td className="py-2 px-3 text-slate-500 dark:text-slate-400">{it.satuan}</td>
-                            <td className="py-2 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-mono font-bold text-emerald-800 dark:text-emerald-300 whitespace-nowrap">
-                              Rp {(Number(it.harga_satuan) || 0).toLocaleString('id-ID')}
-                            </td>
-                            <td className={`py-2 px-3 text-right font-semibold whitespace-nowrap ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                              Rp {itemSubtotal.toLocaleString('id-ID')}
-                            </td>
-                            <td className={`py-2 px-3 text-right font-mono text-xs whitespace-nowrap ${it.total_harga < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                              Rp {itemPpn.toLocaleString('id-ID')}
-                            </td>
-                            <td className={`py-2 px-3 text-right font-mono font-bold whitespace-nowrap bg-indigo-500/10 dark:bg-indigo-950/30 ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-900 dark:text-emerald-300'}`}>
-                              Rp {itemGrandTotal.toLocaleString('id-ID')}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot className="bg-slate-100 dark:bg-slate-950 font-semibold border-t border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
-                      <tr>
-                        <td colSpan={3} className="py-2.5 px-3 text-right">Total Fisik:</td>
-                        <td className="py-2.5 px-3 text-right text-indigo-600 dark:text-indigo-300 font-bold">{data.total_qty}</td>
-                        <td></td>
-                        <td className="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400 text-xs">Subtotal (DPP):</td>
-                        <td className="py-2.5 px-3 text-right font-semibold text-slate-800 dark:text-slate-200">
-                          Rp {(data.total_nominal || 0).toLocaleString('id-ID')}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-xs text-slate-600 dark:text-slate-400">
-                          Rp {Math.round((data.total_nominal || 0) * 0.11).toLocaleString('id-ID')}
-                        </td>
-                        <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 font-extrabold text-sm whitespace-nowrap">
-                          Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
-                        </td>
-                      </tr>
-                      <tr className="border-t border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
-                        <td colSpan={6} className="py-2 px-3 text-right">Grand Total Faktur Termasuk PPN 11%:</td>
-                        <td colSpan={3} className="py-2 px-3 text-right font-bold font-mono text-indigo-600 dark:text-indigo-400 text-sm">
-                          Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
               </div>
 
               {/* Related Invoices: Link Langsung ke INV Lainnya dari Apotek Ini */}
@@ -341,7 +262,7 @@ export default function InvoiceModal({
                     <div className="flex items-center gap-2">
                       <Receipt className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                       <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        Link Langsung ke Faktur (INV) Lain dari Apotek Ini ({data.other_invoices.length})
+                        Faktur Lain dari Apotek Ini ({data.other_invoices.length})
                       </h4>
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -365,16 +286,12 @@ export default function InvoiceModal({
                           <span className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400 group-hover:underline">
                             {other.nomor_faktur}
                           </span>
-                          {Number(other.is_retur) === 1 && (
-                            <span className="px-1 py-0.2 text-[9px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 rounded">
-                              RETUR
-                            </span>
-                          )}
+                          <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
                         </div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
                           <span>{other.tanggal}</span>
                           <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                            Rp {Math.round(other.total_amount || 0).toLocaleString('id-ID')}
+                            Rp {Math.round((other.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
                           </span>
                         </div>
                       </button>
@@ -385,20 +302,7 @@ export default function InvoiceModal({
             </div>
           ) : null}
         </div>
-      </div>
-
-      {/* Retur Calculator Modal Popup */}
-      <ReturCalculatorModal
-        isOpen={isReturOpen}
-        onClose={() => setIsReturOpen(false)}
-        customerName={data?.nama_pelanggan}
-        invoiceNumber={invoiceNumber}
-        invoiceDate={data?.tanggal}
-        items={returItems}
-        onSelectInvoice={onSelectInvoice}
-        onSelectProduct={onSelectProduct}
-      />
-    </>
+    </div>
   );
 }
 

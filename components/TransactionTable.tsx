@@ -8,11 +8,9 @@ import {
   ChevronRight,
   Download,
   ArrowUpDown,
-  RotateCcw,
   ExternalLink,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import ReturCalculatorModal, { ReturItem } from './ReturCalculatorModal';
 
 interface TransactionTableProps {
   rows: any[];
@@ -73,33 +71,6 @@ export default function TransactionTable({
   onSelectProduct,
   onSelectCustomer,
 }: TransactionTableProps) {
-  // Retur modal state
-  const [isReturOpen, setIsReturOpen] = useState(false);
-  const [returCustomer, setReturCustomer] = useState('');
-  const [returInvoice, setReturInvoice] = useState('');
-  const [returDate, setReturDate] = useState('');
-  const [returItems, setReturItems] = useState<ReturItem[]>([]);
-
-  const handleOpenRetur = (r: any) => {
-    setReturCustomer(r.nama_pelanggan || '');
-    setReturInvoice(r.nomor_faktur || '');
-    setReturDate(r.tanggal || '');
-    setReturItems([
-      {
-        id: r.id,
-        kode_barang: r.kode_barang,
-        nama_barang: r.nama_barang,
-        satuan: r.satuan,
-        harga_satuan: Number(r.harga_satuan) || 0,
-        qty_beli: Math.abs(Number(r.kuantitas) || 0),
-        qty_retur: 1,
-        nomor_faktur: r.nomor_faktur,
-        tanggal: r.tanggal,
-      },
-    ]);
-    setIsReturOpen(true);
-  };
-
   const handleExport = () => {
     if (rows.length === 0) return;
     const exportData = rows.map((r) => ({
@@ -125,8 +96,7 @@ export default function TransactionTable({
   };
 
   return (
-    <>
-      <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm dark:shadow-xl overflow-hidden flex flex-col transition-colors">
+    <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm dark:shadow-xl overflow-hidden flex flex-col transition-colors">
         {/* Controls / Filter Header */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-3 bg-slate-50 dark:bg-slate-950/40">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -200,30 +170,8 @@ export default function TransactionTable({
               </div>
             </div>
 
-            {/* Right side: Retur & Export Actions */}
+            {/* Right side: Export & Total Counter */}
             <div className="flex items-center gap-2">
-              {/* Prominent Retur Button on Top */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (rows.length > 0) {
-                    const firstRow = rows[0];
-                    handleOpenRetur(firstRow);
-                  } else {
-                    setReturCustomer('');
-                    setReturInvoice(search || '');
-                    setReturDate('');
-                    setReturItems([]);
-                    setIsReturOpen(true);
-                  }
-                }}
-                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
-                title="Buka Kalkulator & Pengajuan Retur"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Kalkulator Retur</span>
-              </button>
-
               {/* Quick Export Button */}
               <button
                 onClick={handleExport}
@@ -512,18 +460,5 @@ export default function TransactionTable({
           </div>
         </div>
       </div>
-
-      {/* Retur Calculator Modal Popup */}
-      <ReturCalculatorModal
-        isOpen={isReturOpen}
-        onClose={() => setIsReturOpen(false)}
-        customerName={returCustomer}
-        invoiceNumber={returInvoice}
-        invoiceDate={returDate}
-        items={returItems}
-        onSelectInvoice={onSelectInvoice}
-        onSelectProduct={onSelectProduct}
-      />
-    </>
   );
 }

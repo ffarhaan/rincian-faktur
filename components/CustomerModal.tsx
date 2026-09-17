@@ -20,7 +20,6 @@ import {
   Sparkles,
   Tag,
 } from 'lucide-react';
-import ReturCalculatorModal, { ReturItem } from './ReturCalculatorModal';
 
 interface CustomerModalProps {
   customerName: string | null;
@@ -63,10 +62,6 @@ export default function CustomerModal({
     totalPages: 0,
   });
   const [loadingItems, setLoadingItems] = useState(false);
-  const [isReturOpen, setIsReturOpen] = useState(false);
-  const [returItems, setReturItems] = useState<ReturItem[]>([]);
-  const [selectedReturInvoice, setSelectedReturInvoice] = useState<string>('');
-  const [selectedReturDate, setSelectedReturDate] = useState<string>('');
 
   // Tab 2 & 3 States
   const [productSearch, setProductSearch] = useState('');
@@ -423,17 +418,17 @@ export default function CustomerModal({
                   </div>
                 </div>
 
-                {/* Direct Invoice Link & Top Retur Action Bar (Di Bawah Pencarian) */}
+                {/* Direct Invoice Link Bar (Di Bawah Pencarian) */}
                 <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-xl">
-                  {/* Left: Quick Direct Invoice Links */}
+                  {/* Quick Direct Invoice Links */}
                   <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
                       <FileText className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>Faktur Terkait (Klik Langsung Buka):</span>
+                      <span>Faktur Terkait (Klik no faktur untuk langsung lihat daftar barang &amp; harga +PPN 11%):</span>
                     </span>
                     {matchingInvoices.length > 0 ? (
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {matchingInvoices.slice(0, 5).map((inv) => (
+                        {matchingInvoices.slice(0, 6).map((inv) => (
                           <button
                             key={inv.nomor_faktur}
                             type="button"
@@ -445,9 +440,9 @@ export default function CustomerModal({
                             <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                           </button>
                         ))}
-                        {matchingInvoices.length > 5 && (
+                        {matchingInvoices.length > 6 && (
                           <span className="text-[11px] text-slate-400 self-center">
-                            +{matchingInvoices.length - 5} lainnya
+                            +{matchingInvoices.length - 6} lainnya
                           </span>
                         )}
                       </div>
@@ -457,44 +452,12 @@ export default function CustomerModal({
                       </span>
                     )}
                   </div>
-
-                  {/* Right: Dedicated Retur Action Button at the Top */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const targetItems = itemData.items.slice(0, 25).map((it: any) => ({
-                        id: it.id,
-                        kode_barang: it.kode_barang || '',
-                        nama_barang: it.nama_barang || '',
-                        satuan: it.satuan || 'PCS',
-                        harga_satuan: Number(it.harga_satuan) || 0,
-                        qty_beli: Number(it.kuantitas) || 1,
-                        qty_retur: 1,
-                        nomor_faktur: it.nomor_faktur || '',
-                        tanggal: it.tanggal || '',
-                      }));
-                      setSelectedReturInvoice(matchingInvoices[0]?.nomor_faktur || '');
-                      setSelectedReturDate(matchingInvoices[0]?.tanggal || '');
-                      setReturItems(targetItems);
-                      setIsReturOpen(true);
-                    }}
-                    className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all ml-auto"
-                    title="Buka Kalkulator & Pengajuan Retur untuk item ini"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Kalkulator &amp; Pengajuan Retur</span>
-                    {itemData.items.length > 0 && (
-                      <span className="px-1.5 py-0.2 text-[10px] bg-white/20 rounded-full font-mono">
-                        {itemData.items.length} item
-                      </span>
-                    )}
-                  </button>
                 </div>
 
                 {/* Direct Ref INV & Price Items Table */}
                 <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-950/50 shadow-sm">
                   <div className="max-h-[440px] overflow-y-auto overflow-x-auto">
-                    <table className="w-full min-w-[1350px] text-xs text-left border-collapse border border-slate-200 dark:border-slate-800">
+                    <table className="w-full min-w-[1450px] text-xs text-left border-collapse border border-slate-200 dark:border-slate-800">
                       <thead className="bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 select-none">
                         <tr className="divide-x divide-slate-200 dark:divide-slate-800">
                           <th className="py-2.5 px-3 min-w-[170px]">No. Faktur (Ref INV)</th>
@@ -503,8 +466,9 @@ export default function CustomerModal({
                           <th className="py-2.5 px-3 min-w-[240px]">Nama Obat / Barang</th>
                           <th className="py-2.5 px-3 text-right min-w-[80px]">Qty Beli</th>
                           <th className="py-2.5 px-3 min-w-[70px]">Satuan</th>
-                          <th className="py-2.5 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold min-w-[130px]">
-                            Harga Satuan (Hit Retur)
+                          <th className="py-2.5 px-3 text-right min-w-[125px]">Harga Satuan (DPP)</th>
+                          <th className="py-2.5 px-3 text-right bg-emerald-500/15 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-bold min-w-[150px]">
+                            Harga Satuan (+PPN 11%)
                           </th>
                           <th className="py-2.5 px-3 text-right min-w-[130px]">Total Nilai (DPP)</th>
                           <th className="py-2.5 px-3 text-right font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap min-w-[110px]">
@@ -520,14 +484,14 @@ export default function CustomerModal({
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                         {loadingItems ? (
                           <tr>
-                            <td colSpan={12} className="py-16 text-center text-slate-400">
+                            <td colSpan={13} className="py-16 text-center text-slate-400">
                               <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto mb-2" />
                               <span>Mencari rincian faktur &amp; harga satuan...</span>
                             </td>
                           </tr>
                         ) : itemData.items.length === 0 ? (
                           <tr>
-                            <td colSpan={12} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                            <td colSpan={13} className="py-12 text-center text-slate-400 dark:text-slate-500">
                               {itemSearch
                                 ? `Tidak ada transaksi yang cocok dengan kata kunci "${itemSearch}"`
                                 : 'Tidak ada riwayat pembelian untuk apotek ini.'}
@@ -536,6 +500,8 @@ export default function CustomerModal({
                         ) : (
                           itemData.items.map((it: any) => {
                             const isRetur = Number(it.is_retur) === 1;
+                            const unitDpp = Number(it.harga_satuan) || 0;
+                            const unitIncPpn = Math.round(unitDpp * 1.11);
                             const itemDpp = Number(it.total_harga) || 0;
                             const itemPpn = Math.round(itemDpp * 0.11);
                             const itemGrand = Math.round(itemDpp * 1.11);
@@ -593,9 +559,14 @@ export default function CustomerModal({
                                   {it.satuan}
                                 </td>
 
-                                {/* Harga Satuan (HIGHLIGHTED FOR RETUR HIT) */}
+                                {/* Harga Satuan (DPP) */}
+                                <td className="py-2 px-3 text-right font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                  Rp {unitDpp.toLocaleString('id-ID')}
+                                </td>
+
+                                {/* Harga Satuan (+PPN 11%) HIGHLIGHTED */}
                                 <td className="py-2 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-mono font-bold text-emerald-800 dark:text-emerald-300 whitespace-nowrap">
-                                  Rp {(Number(it.harga_satuan) || 0).toLocaleString('id-ID')}
+                                  Rp {unitIncPpn.toLocaleString('id-ID')}
                                 </td>
 
                                 {/* Total Nilai (DPP) */}
@@ -1141,24 +1112,6 @@ export default function CustomerModal({
           </div>
         ) : null}
       </div>
-
-      {/* Retur Calculator & Slip Generator Modal */}
-      <ReturCalculatorModal
-        isOpen={isReturOpen}
-        onClose={() => setIsReturOpen(false)}
-        customerName={customerName || ''}
-        invoiceNumber={selectedReturInvoice}
-        invoiceDate={selectedReturDate}
-        items={returItems}
-        onSelectInvoice={(inv) => {
-          setIsReturOpen(false);
-          onSelectInvoice(inv);
-        }}
-        onSelectProduct={(prod) => {
-          setIsReturOpen(false);
-          onSelectProduct(prod);
-        }}
-      />
     </div>
   );
 }
