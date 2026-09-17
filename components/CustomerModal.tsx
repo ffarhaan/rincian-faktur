@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue, useCallback } from 'react';
 import {
   X,
   Building2,
@@ -17,6 +17,8 @@ import {
   RotateCcw,
   CheckCircle2,
   Calendar,
+  Sparkles,
+  Tag,
 } from 'lucide-react';
 
 interface CustomerModalProps {
@@ -48,29 +50,43 @@ export default function CustomerModal({
 }: CustomerModalProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'top_products' | 'invoices'>('top_products');
+  const [activeTab, setActiveTab] = useState<'items_history' | 'top_products' | 'invoices'>('items_history');
 
-  // Search states (immediate for input responsiveness)
+  // Tab 1: Item History State (Ref INV, Kode, Nama, Qty, Harga Satuan)
+  const [itemSearch, setItemSearch] = useState('');
+  const [itemFilterType, setItemFilterType] = useState<'all' | 'sales' | 'retur'>('all');
+  const [itemPage, setItemPage] = useState(1);
+  const [itemData, setItemData] = useState<{ items: any[]; total: number; totalPages: number }>({
+    items: [],
+    total: 0,
+    totalPages: 0,
+  });
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  // Tab 2 & 3 States
   const [productSearch, setProductSearch] = useState('');
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [accordionSearch, setAccordionSearch] = useState<Record<string, string>>({});
-
-  // Pagination states
   const [productPage, setProductPage] = useState(1);
   const [invoicePage, setInvoicePage] = useState(1);
-
-  // Deferred values to ensure zero keystroke lag
-  const deferredProductSearch = useDeferredValue(productSearch);
-  const deferredInvoiceSearch = useDeferredValue(invoiceSearch);
 
   // Accordion for product -> invoices drill down
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [productInvoices, setProductInvoices] = useState<Record<string, any[]>>({});
   const [loadingProductInvoices, setLoadingProductInvoices] = useState<Record<string, boolean>>({});
 
+  // Deferred inputs for smooth typing
+  const deferredItemSearch = useDeferredValue(itemSearch);
+  const deferredProductSearch = useDeferredValue(productSearch);
+  const deferredInvoiceSearch = useDeferredValue(invoiceSearch);
+
+  // Fetch Summary and initial details
   useEffect(() => {
     if (!customerName) return;
     setLoading(true);
+    setItemSearch('');
+    setItemFilterType('all');
+    setItemPage(1);
     setProductSearch('');
     setInvoiceSearch('');
     setProductPage(1);
@@ -87,7 +103,43 @@ export default function CustomerModal({
       .finally(() => setLoading(false));
   }, [customerName]);
 
-  // Reset pagination when search changes
+  // Fetch Items History with Ref INV and Unit Price
+  const fetchItemsHistory = useCallback(async () => {
+    if (!customerName) return;
+    setLoadingItems(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('customer', customerName);
+      if (deferredItemSearch.trim()) params.set('search', deferredItemSearch.trim());
+      if (itemFilterType !== 'all') params.set('isRetur', itemFilterType);
+      params.set('page', String(itemPage));
+      params.set('limit', String(ITEMS_PER_PAGE));
+
+      const res = await fetch(`/api/pelanggan/items?${params.toString()}`);
+      const json = await res.json();
+      setItemData({
+        items: json.items || [],
+        total: json.total || 0,
+        totalPages: json.totalPages || 0,
+      });
+    } catch (err) {
+      console.error('Error fetching items history:', err);
+    } finally {
+      setLoadingItems(false);
+    }
+  }, [customerName, deferredItemSearch, itemFilterType, itemPage]);
+
+  useEffect(() => {
+    if (activeTab === 'items_history') {
+      fetchItemsHistory();
+    }
+  }, [activeTab, fetchItemsHistory]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setItemPage(1);
+  }, [deferredItemSearch, itemFilterType]);
+
   useEffect(() => {
     setProductPage(1);
   }, [deferredProductSearch]);
@@ -96,7 +148,7 @@ export default function CustomerModal({
     setInvoicePage(1);
   }, [deferredInvoiceSearch]);
 
-  // Filtered Products
+  // Filtered Products (Tab 2)
   const filteredProducts = useMemo(() => {
     if (!data?.top_products) return [];
     if (!deferredProductSearch.trim()) return data.top_products;
@@ -108,7 +160,6 @@ export default function CustomerModal({
     );
   }, [data, deferredProductSearch]);
 
-  // Paginated Products
   const paginatedProducts = useMemo(() => {
     const start = (productPage - 1) * ITEMS_PER_PAGE;
     return filteredProducts.slice(start, start + ITEMS_PER_PAGE);
@@ -116,7 +167,7 @@ export default function CustomerModal({
 
   const totalProductPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
 
-  // Filtered Invoices
+  // Filtered Invoices (Tab 3)
   const filteredInvoices = useMemo(() => {
     if (!data?.invoices) return [];
     if (!deferredInvoiceSearch.trim()) return data.invoices;
@@ -129,7 +180,6 @@ export default function CustomerModal({
     );
   }, [data, deferredInvoiceSearch]);
 
-  // Paginated Invoices
   const paginatedInvoices = useMemo(() => {
     const start = (invoicePage - 1) * ITEMS_PER_PAGE;
     return filteredInvoices.slice(start, start + ITEMS_PER_PAGE);
@@ -137,7 +187,7 @@ export default function CustomerModal({
 
   const totalInvoicePages = Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE) || 1;
 
-  // Toggle Accordion on Product to fetch its specific Invoices (Ref INV)
+  // Toggle Accordion on Product (Tab 2)
   const handleToggleProduct = async (productName: string) => {
     if (expandedProduct === productName) {
       setExpandedProduct(null);
@@ -166,7 +216,7 @@ export default function CustomerModal({
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-6xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60">
           <div className="flex items-center gap-3.5 flex-1 min-w-0 mr-4">
@@ -206,53 +256,67 @@ export default function CustomerModal({
             <span className="text-sm font-medium">Memuat profil & riwayat transaksi apotek...</span>
           </div>
         ) : data ? (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
             {/* KPI Summary Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="bg-slate-50 dark:bg-slate-950/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block uppercase tracking-wider">Total Faktur</span>
-                <span className="text-lg sm:text-xl font-bold text-indigo-600 dark:text-indigo-300 mt-1 block">
+                <span className="text-lg sm:text-xl font-bold text-indigo-600 dark:text-indigo-300 mt-0.5 block">
                   {(data.summary?.total_invoices || 0).toLocaleString('id-ID')} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Faktur</span>
                 </span>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="bg-slate-50 dark:bg-slate-950/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block uppercase tracking-wider">Frekuensi Order (SO)</span>
-                <span className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-300 mt-1 block">
+                <span className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-300 mt-0.5 block">
                   {(data.summary?.total_orders || 0).toLocaleString('id-ID')} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Kali</span>
                 </span>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="bg-slate-50 dark:bg-slate-950/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block uppercase tracking-wider">Total Belanja Bersih</span>
-                <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 block truncate">
+                <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
                   Rp {Math.round(data.summary?.net_spent || 0).toLocaleString('id-ID')}
                 </span>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="bg-slate-50 dark:bg-slate-950/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block uppercase tracking-wider">Total Retur</span>
-                <span className="text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400 mt-1 block truncate">
+                <span className="text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400 mt-0.5 block truncate">
                   Rp {Math.abs(Math.round(data.summary?.total_retur || 0)).toLocaleString('id-ID')}
                 </span>
               </div>
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex border-b border-slate-200 dark:border-slate-800">
+            <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('items_history')}
+                className={`px-4 py-2.5 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
+                  activeTab === 'items_history'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/30'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Tag className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Cari Ref INV &amp; Harga Satuan (Untuk Retur)</span>
+                <span className="px-1.5 py-0.5 text-[10px] bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded font-semibold">
+                  Utama
+                </span>
+              </button>
               <button
                 onClick={() => setActiveTab('top_products')}
-                className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors ${
+                className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-colors ${
                   activeTab === 'top_products'
-                    ? 'border-sky-500 text-sky-600 dark:text-sky-400'
+                    ? 'border-sky-500 text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/30'
                     : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 <Pill className="w-4 h-4" />
-                Daftar Obat yang Dibeli ({data.top_products?.length || 0})
+                Rekap per Obat ({data.top_products?.length || 0})
               </button>
               <button
                 onClick={() => setActiveTab('invoices')}
-                className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors ${
+                className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-1.5 whitespace-nowrap transition-colors ${
                   activeTab === 'invoices'
-                    ? 'border-sky-500 text-sky-600 dark:text-sky-400'
+                    ? 'border-sky-500 text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/30'
                     : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
@@ -261,23 +325,266 @@ export default function CustomerModal({
               </button>
             </div>
 
-            {/* Tab 1: Products List with Instant Search & Ref INV Drill-Down */}
+            {/* Tab 1 (PRIMARY): Item History with Direct Ref INV, Kode, Nama, Qty, Satuan, Harga Satuan */}
+            {activeTab === 'items_history' && (
+              <div className="space-y-3">
+                {/* Search and Filters Bar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                  {/* Search input */}
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-indigo-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={itemSearch}
+                      onChange={(e) => setItemSearch(e.target.value)}
+                      placeholder="Cari Nama Obat, Kode Barang, atau Nomor Faktur..."
+                      className="w-full pl-9 pr-8 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 shadow-sm transition-all"
+                    />
+                    {itemSearch && (
+                      <button
+                        onClick={() => setItemSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter type & results count */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg text-xs font-semibold">
+                      <button
+                        onClick={() => setItemFilterType('all')}
+                        className={`px-3 py-1 rounded-md transition-colors ${
+                          itemFilterType === 'all'
+                            ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        Semua
+                      </button>
+                      <button
+                        onClick={() => setItemFilterType('sales')}
+                        className={`px-3 py-1 rounded-md transition-colors ${
+                          itemFilterType === 'sales'
+                            ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        Beli (Sales)
+                      </button>
+                      <button
+                        onClick={() => setItemFilterType('retur')}
+                        className={`px-3 py-1 rounded-md transition-colors ${
+                          itemFilterType === 'retur'
+                            ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        Retur
+                      </button>
+                    </div>
+
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap pl-1">
+                      Total: <strong className="text-slate-800 dark:text-slate-200 font-bold">{itemData.total.toLocaleString('id-ID')}</strong> baris
+                    </span>
+                  </div>
+                </div>
+
+                {/* Direct Ref INV & Price Items Table */}
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-950/50 shadow-sm">
+                  <div className="max-h-[420px] overflow-y-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 select-none">
+                        <tr>
+                          <th className="py-2.5 px-3">No. Faktur (Ref INV)</th>
+                          <th className="py-2.5 px-3">Tanggal</th>
+                          <th className="py-2.5 px-3">Kode Barang</th>
+                          <th className="py-2.5 px-3">Nama Obat / Barang</th>
+                          <th className="py-2.5 px-3 text-right">Qty Beli</th>
+                          <th className="py-2.5 px-3">Satuan</th>
+                          <th className="py-2.5 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold">
+                            Harga Satuan (Hit Retur)
+                          </th>
+                          <th className="py-2.5 px-3 text-right">Total Nilai</th>
+                          <th className="py-2.5 px-3 text-center">Tipe</th>
+                          <th className="py-2.5 px-3">No. SO</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                        {loadingItems ? (
+                          <tr>
+                            <td colSpan={10} className="py-16 text-center text-slate-400">
+                              <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto mb-2" />
+                              <span>Mencari rincian faktur &amp; harga satuan...</span>
+                            </td>
+                          </tr>
+                        ) : itemData.items.length === 0 ? (
+                          <tr>
+                            <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                              {itemSearch
+                                ? `Tidak ada transaksi yang cocok dengan kata kunci "${itemSearch}"`
+                                : 'Tidak ada riwayat pembelian untuk apotek ini.'}
+                            </td>
+                          </tr>
+                        ) : (
+                          itemData.items.map((it: any) => {
+                            const isRetur = Number(it.is_retur) === 1;
+                            return (
+                              <tr
+                                key={it.id}
+                                className={`transition-colors ${
+                                  isRetur
+                                    ? 'bg-rose-50/50 dark:bg-rose-950/20 hover:bg-rose-100/50 dark:hover:bg-rose-950/40'
+                                    : 'hover:bg-indigo-50/40 dark:hover:bg-slate-850/60'
+                                }`}
+                              >
+                                {/* Ref INV (Nomor Faktur) */}
+                                <td className="py-2 px-3 font-mono font-bold whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => onSelectInvoice(it.nomor_faktur)}
+                                    className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 hover:underline bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800/60"
+                                    title="Klik untuk membuka detail faktur ini"
+                                  >
+                                    <span>{it.nomor_faktur}</span>
+                                    <ExternalLink className="w-3 h-3 text-indigo-500" />
+                                  </button>
+                                </td>
+
+                                {/* Tanggal */}
+                                <td className="py-2 px-3 font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                  {it.tanggal}
+                                </td>
+
+                                {/* Kode Barang */}
+                                <td className="py-2 px-3 font-mono text-slate-500 dark:text-slate-400">
+                                  {it.kode_barang || '-'}
+                                </td>
+
+                                {/* Nama Barang */}
+                                <td className="py-2 px-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => onSelectProduct(it.nama_barang)}
+                                    className="font-medium text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline text-left"
+                                    title="Lihat riwayat obat ini"
+                                  >
+                                    {cleanHtml(it.nama_barang)}
+                                  </button>
+                                </td>
+
+                                {/* Qty Beli */}
+                                <td className="py-2 px-3 text-right font-bold text-slate-800 dark:text-slate-200">
+                                  {it.kuantitas?.toLocaleString('id-ID')}
+                                </td>
+
+                                {/* Satuan */}
+                                <td className="py-2 px-3 text-slate-500 dark:text-slate-400">
+                                  {it.satuan}
+                                </td>
+
+                                {/* Harga Satuan (HIGHLIGHTED FOR RETUR HIT) */}
+                                <td className="py-2 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-mono font-bold text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
+                                  Rp {(Number(it.harga_satuan) || 0).toLocaleString('id-ID')}
+                                </td>
+
+                                {/* Total Nilai */}
+                                <td
+                                  className={`py-2 px-3 text-right font-semibold whitespace-nowrap ${
+                                    isRetur ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'
+                                  }`}
+                                >
+                                  Rp {(Number(it.total_harga) || 0).toLocaleString('id-ID')}
+                                </td>
+
+                                {/* Status Tipe */}
+                                <td className="py-2 px-3 text-center whitespace-nowrap">
+                                  {isRetur ? (
+                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded">
+                                      <RotateCcw className="w-2.5 h-2.5" /> Retur
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded">
+                                      <CheckCircle2 className="w-2.5 h-2.5" /> Sales
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* No. SO */}
+                                <td className="py-2 px-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                  {it.no_so ? (
+                                    onSelectSO ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => onSelectSO(it.no_so)}
+                                        className="hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline"
+                                      >
+                                        {it.no_so}
+                                      </button>
+                                    ) : (
+                                      it.no_so
+                                    )
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination for Item History */}
+                  {itemData.totalPages > 1 && (
+                    <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                      <span>
+                        Menampilkan {((itemPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(itemPage * ITEMS_PER_PAGE, itemData.total)} dari {itemData.total.toLocaleString('id-ID')} baris
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setItemPage((p) => Math.max(1, p - 1))}
+                          disabled={itemPage === 1}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-medium"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
+                        </button>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {itemPage} / {itemData.totalPages}
+                        </span>
+                        <button
+                          onClick={() => setItemPage((p) => Math.min(itemData.totalPages, p + 1))}
+                          disabled={itemPage === itemData.totalPages}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-medium"
+                        >
+                          Selanjutnya <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Aggregated Products List */}
             {activeTab === 'top_products' && (
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="text-xs text-slate-500 dark:text-slate-400">
-                    Klik obat atau tombol <strong>Frekuensi Beli</strong> untuk melihat daftar <strong>Nomor Faktur (Ref INV)</strong>.
+                    Menampilkan rekapitulasi total pembelian per nama obat. Klik obat atau tombol <strong>Frekuensi Beli</strong> untuk melihat daftar Ref INV.
                   </div>
 
-                  {/* Instant Search Bar for Products */}
+                  {/* Search Bar */}
                   <div className="relative w-full sm:w-72">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
-                      placeholder="Cari nama obat yang dibeli..."
-                      className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500 shadow-sm transition-colors"
+                      placeholder="Cari nama obat..."
+                      className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-sky-500 shadow-sm transition-colors"
                     />
                     {productSearch && (
                       <button
@@ -440,7 +747,7 @@ export default function CustomerModal({
                                                   <th className="py-2 px-3">Tanggal</th>
                                                   <th className="py-2 px-3 text-center">Tipe</th>
                                                   <th className="py-2 px-3 text-right">Kuantitas</th>
-                                                  <th className="py-2 px-3 text-right">Harga Satuan</th>
+                                                  <th className="py-2 px-3 text-right bg-emerald-500/10 font-bold text-emerald-700 dark:text-emerald-300">Harga Satuan</th>
                                                   <th className="py-2 px-3 text-right">Total Nominal</th>
                                                 </tr>
                                               </thead>
@@ -500,7 +807,7 @@ export default function CustomerModal({
                                                       <td className="py-2 px-3 text-right font-semibold text-slate-800 dark:text-slate-200">
                                                         {inv.kuantitas} {inv.satuan}
                                                       </td>
-                                                      <td className="py-2 px-3 text-right text-slate-600 dark:text-slate-300">
+                                                      <td className="py-2 px-3 text-right bg-emerald-500/10 font-mono font-bold text-emerald-700 dark:text-emerald-300">
                                                         Rp {(Number(inv.harga_satuan) || 0).toLocaleString('id-ID')}
                                                       </td>
                                                       <td
@@ -560,12 +867,12 @@ export default function CustomerModal({
               </div>
             )}
 
-            {/* Tab 2: Invoices List with Instant Search & Pagination */}
+            {/* Tab 3: Invoices Summary List */}
             {activeTab === 'invoices' && (
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="text-xs text-slate-500 dark:text-slate-400">
-                    Menampilkan riwayat faktur yang diterbitkan untuk apotek ini.
+                    Menampilkan riwayat nomor faktur yang diterbitkan untuk apotek ini.
                   </div>
 
                   {/* Instant Search Bar for Invoices */}
@@ -576,7 +883,7 @@ export default function CustomerModal({
                       value={invoiceSearch}
                       onChange={(e) => setInvoiceSearch(e.target.value)}
                       placeholder="Cari No Faktur atau No SO..."
-                      className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500 shadow-sm transition-colors"
+                      className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-sky-500 shadow-sm transition-colors"
                     />
                     {invoiceSearch && (
                       <button
@@ -698,3 +1005,4 @@ export default function CustomerModal({
     </div>
   );
 }
+

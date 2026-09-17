@@ -381,7 +381,7 @@ export default function MedicineModal({
                                         </div>
                                       ) : (
                                         <div className="max-h-56 overflow-y-auto border border-slate-200 dark:border-slate-800/80 rounded-lg">
-                                          <table className="w-full text-[11px] text-left">
+                                            <table className="w-full text-[11px] text-left">
                                             <thead className="bg-slate-100 dark:bg-slate-950/80 text-slate-600 dark:text-slate-400 font-medium sticky top-0 border-b border-slate-200 dark:border-slate-800">
                                               <tr>
                                                 <th className="py-2 px-3">Nomor Faktur (Klik Link)</th>
@@ -389,7 +389,7 @@ export default function MedicineModal({
                                                 <th className="py-2 px-3">Tanggal</th>
                                                 <th className="py-2 px-3 text-center">Tipe</th>
                                                 <th className="py-2 px-3 text-right">Kuantitas</th>
-                                                <th className="py-2 px-3 text-right">Harga Satuan</th>
+                                                <th className="py-2 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-bold text-emerald-700 dark:text-emerald-300">Harga Satuan (Hit Retur)</th>
                                                 <th className="py-2 px-3 text-right">Total Nominal</th>
                                               </tr>
                                             </thead>
@@ -449,7 +449,7 @@ export default function MedicineModal({
                                                     <td className="py-2 px-3 text-right font-semibold text-slate-800 dark:text-slate-200">
                                                       {inv.kuantitas} {inv.satuan}
                                                     </td>
-                                                    <td className="py-2 px-3 text-right text-slate-600 dark:text-slate-300">
+                                                    <td className="py-2 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-mono font-bold text-emerald-700 dark:text-emerald-300">
                                                       Rp {(Number(inv.harga_satuan) || 0).toLocaleString('id-ID')}
                                                     </td>
                                                     <td

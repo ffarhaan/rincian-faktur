@@ -544,3 +544,70 @@ export async function getCustomerInvoices(params: {
   };
 }
 
+// 10. Paginated Customer Item History (Direct Ref INV, Kode, Nama, Qty, Satuan, Harga Satuan)
+export async function getCustomerItemHistory(params: {
+  namaPelanggan: string;
+  search?: string;
+  isRetur?: string; // 'all' | 'sales' | 'retur'
+  page?: number;
+  limit?: number;
+}) {
+  const client = getClient();
+  const { namaPelanggan, search = '', isRetur = 'all', page = 1, limit = 50 } = params;
+  const offset = (page - 1) * limit;
+
+  const conditions = ['nama_pelanggan = ?'];
+  const queryParams: (string | number)[] = [namaPelanggan];
+
+  if (isRetur === 'sales') {
+    conditions.push('is_retur = 0');
+  } else if (isRetur === 'retur') {
+    conditions.push('is_retur = 1');
+  }
+
+  if (search.trim()) {
+    const s = `%${search.trim()}%`;
+    conditions.push('(nomor_faktur LIKE ? OR nama_barang LIKE ? OR kode_barang LIKE ? OR no_so LIKE ?)');
+    queryParams.push(s, s, s, s);
+  }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+  const countQuery = `SELECT count(*) as total FROM transactions ${whereClause}`;
+  const dataQuery = `
+    SELECT
+      id,
+      nomor_faktur,
+      no_so,
+      tanggal,
+      kode_barang,
+      nama_barang,
+      kuantitas,
+      satuan,
+      harga_satuan,
+      total_harga,
+      is_retur,
+      keterangan
+    FROM transactions
+    ${whereClause}
+    ORDER BY tanggal DESC, id DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  const [countRes, dataRes] = await Promise.all([
+    client.execute({ sql: countQuery, args: queryParams }),
+    client.execute({ sql: dataQuery, args: [...queryParams, limit, offset] })
+  ]);
+
+  const total = Number(countRes.rows[0]?.total || 0);
+
+  return {
+    items: dataRes.rows as unknown as TransactionRow[],
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
+}
+
+
