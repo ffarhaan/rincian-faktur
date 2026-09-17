@@ -20,6 +20,7 @@ import {
   Sparkles,
   Tag,
 } from 'lucide-react';
+import ReturCalculatorModal, { ReturItem } from './ReturCalculatorModal';
 
 interface CustomerModalProps {
   customerName: string | null;
@@ -62,6 +63,10 @@ export default function CustomerModal({
     totalPages: 0,
   });
   const [loadingItems, setLoadingItems] = useState(false);
+  const [isReturOpen, setIsReturOpen] = useState(false);
+  const [returItems, setReturItems] = useState<ReturItem[]>([]);
+  const [selectedReturInvoice, setSelectedReturInvoice] = useState<string>('');
+  const [selectedReturDate, setSelectedReturDate] = useState<string>('');
 
   // Tab 2 & 3 States
   const [productSearch, setProductSearch] = useState('');
@@ -409,19 +414,20 @@ export default function CustomerModal({
                           <th className="py-2.5 px-3 text-right">Total Nilai</th>
                           <th className="py-2.5 px-3 text-center">Tipe</th>
                           <th className="py-2.5 px-3">No. SO</th>
+                          <th className="py-2.5 px-3 text-center">Aksi Retur</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
                         {loadingItems ? (
                           <tr>
-                            <td colSpan={10} className="py-16 text-center text-slate-400">
+                            <td colSpan={11} className="py-16 text-center text-slate-400">
                               <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto mb-2" />
                               <span>Mencari rincian faktur &amp; harga satuan...</span>
                             </td>
                           </tr>
                         ) : itemData.items.length === 0 ? (
                           <tr>
-                            <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                            <td colSpan={11} className="py-12 text-center text-slate-400 dark:text-slate-500">
                               {itemSearch
                                 ? `Tidak ada transaksi yang cocok dengan kata kunci "${itemSearch}"`
                                 : 'Tidak ada riwayat pembelian untuk apotek ini.'}
@@ -528,6 +534,35 @@ export default function CustomerModal({
                                   ) : (
                                     '-'
                                   )}
+                                </td>
+
+                                {/* Aksi Retur */}
+                                <td className="py-2 px-3 text-center whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedReturInvoice(it.nomor_faktur || '');
+                                      setSelectedReturDate(it.tanggal || '');
+                                      setReturItems([
+                                        {
+                                          kode_barang: it.kode_barang || '',
+                                          nama_barang: it.nama_barang || '',
+                                          satuan: it.satuan || 'PCS',
+                                          harga_satuan: Number(it.harga_satuan) || 0,
+                                          qty_beli: Number(it.kuantitas) || 1,
+                                          qty_retur: 1,
+                                          nomor_faktur: it.nomor_faktur || '',
+                                          tanggal: it.tanggal || '',
+                                        },
+                                      ]);
+                                      setIsReturOpen(true);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors shadow-xs"
+                                    title="Hitung & Buat Slip Retur untuk item ini"
+                                  >
+                                    <RotateCcw className="w-3 h-3 text-rose-500" />
+                                    <span>Retur</span>
+                                  </button>
                                 </td>
                               </tr>
                             );
@@ -1002,6 +1037,24 @@ export default function CustomerModal({
           </div>
         ) : null}
       </div>
+
+      {/* Retur Calculator & Slip Generator Modal */}
+      <ReturCalculatorModal
+        isOpen={isReturOpen}
+        onClose={() => setIsReturOpen(false)}
+        customerName={customerName || ''}
+        invoiceNumber={selectedReturInvoice}
+        invoiceDate={selectedReturDate}
+        items={returItems}
+        onSelectInvoice={(inv) => {
+          setIsReturOpen(false);
+          onSelectInvoice(inv);
+        }}
+        onSelectProduct={(prod) => {
+          setIsReturOpen(false);
+          onSelectProduct(prod);
+        }}
+      />
     </div>
   );
 }

@@ -271,6 +271,25 @@ export async function getInvoiceDetail(nomorFaktur: string) {
   const isRetur = items.some(it => Number(it.is_retur) === 1);
   const linkedSOs = Array.from(new Set(items.map(it => it.no_so).filter(Boolean)));
 
+  // Fetch other invoices from the same customer for 1-click navigation
+  let otherInvoices: any[] = [];
+  if (first.nama_pelanggan) {
+    try {
+      const otherRes = await client.execute({
+        sql: `SELECT nomor_faktur, tanggal, is_retur, count(*) as item_count, SUM(total_harga) as total_amount
+              FROM transactions
+              WHERE nama_pelanggan = ? AND nomor_faktur != ?
+              GROUP BY nomor_faktur
+              ORDER BY tanggal DESC
+              LIMIT 15`,
+        args: [first.nama_pelanggan, nomorFaktur]
+      });
+      otherInvoices = otherRes.rows;
+    } catch (e) {
+      console.error('Error fetching other customer invoices:', e);
+    }
+  }
+
   return {
     nomor_faktur: first.nomor_faktur,
     tanggal: first.tanggal,
@@ -283,7 +302,8 @@ export async function getInvoiceDetail(nomorFaktur: string) {
     total_nominal: totalNominal,
     total_qty: totalQty,
     is_retur: isRetur,
-    items
+    items,
+    other_invoices: otherInvoices
   };
 }
 
