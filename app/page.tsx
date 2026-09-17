@@ -263,6 +263,7 @@ export default function Home() {
           onClose={() => setActiveCustomer(null)}
           onSelectInvoice={(inv) => { setActiveCustomer(null); setActiveInvoice(inv); }}
           onSelectProduct={(prod) => { setActiveCustomer(null); setActiveProduct(prod); }}
+          onSelectSO={(so) => { setActiveCustomer(null); setActiveSO(so); }}
         />
       )}
     </main>

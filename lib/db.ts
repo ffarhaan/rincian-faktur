@@ -429,7 +429,7 @@ export async function getCustomerDetail(namaPelanggan: string) {
             WHERE nama_pelanggan = ? AND is_retur = 0
             GROUP BY nama_barang
             ORDER BY total_qty DESC
-            LIMIT 30`,
+            LIMIT 500`,
       args: [namaPelanggan]
     }),
     client.execute({
