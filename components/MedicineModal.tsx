@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
 import {
   X,
   Pill,
@@ -9,6 +9,8 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   ExternalLink,
   Receipt,
@@ -34,6 +36,8 @@ function cleanHtml(str: string): string {
     .replace(/&#39;/g, "'");
 }
 
+const ITEMS_PER_PAGE = 50;
+
 export default function MedicineModal({
   productName,
   onClose,
@@ -44,6 +48,10 @@ export default function MedicineModal({
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [searchApotek, setSearchApotek] = useState('');
+  const [customerPage, setCustomerPage] = useState(1);
+  const [accordionSearch, setAccordionSearch] = useState<Record<string, string>>({});
+
+  const deferredSearchApotek = useDeferredValue(searchApotek);
 
   // Accordion state: customer name -> boolean
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
@@ -57,9 +65,11 @@ export default function MedicineModal({
     if (!productName) return;
     setLoading(true);
     setSearchApotek('');
+    setCustomerPage(1);
     setExpandedCustomer(null);
     setCustomerInvoices({});
     setLoadingInvoices({});
+    setAccordionSearch({});
 
     fetch(`/api/obat?name=${encodeURIComponent(productName)}`)
       .then((res) => res.json())
@@ -68,16 +78,29 @@ export default function MedicineModal({
       .finally(() => setLoading(false));
   }, [productName]);
 
+  // Reset pagination when search changes
+  useEffect(() => {
+    setCustomerPage(1);
+  }, [deferredSearchApotek]);
+
   // Filtered pharmacies
   const filteredCustomers = useMemo(() => {
     if (!data?.customers) return [];
-    if (!searchApotek.trim()) return data.customers;
-    const q = searchApotek.toLowerCase().trim();
+    if (!deferredSearchApotek.trim()) return data.customers;
+    const q = deferredSearchApotek.toLowerCase().trim();
     return data.customers.filter((c: any) =>
       c.nama_pelanggan?.toLowerCase().includes(q) ||
       c.category?.toLowerCase().includes(q)
     );
-  }, [data, searchApotek]);
+  }, [data, deferredSearchApotek]);
+
+  // Paginated pharmacies
+  const paginatedCustomers = useMemo(() => {
+    const start = (customerPage - 1) * ITEMS_PER_PAGE;
+    return filteredCustomers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredCustomers, customerPage]);
+
+  const totalCustomerPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE) || 1;
 
   // Toggle accordion and fetch invoices if not cached
   const handleToggleCustomer = async (custName: string) => {
@@ -146,7 +169,7 @@ export default function MedicineModal({
             <span className="text-sm font-medium">Memuat detail & riwayat apotek...</span>
           </div>
         ) : data ? (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
             {/* KPI Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800/80 shadow-sm">
@@ -227,17 +250,27 @@ export default function MedicineModal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
-                      {filteredCustomers.length === 0 ? (
+                      {paginatedCustomers.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500">
                             Apotek tidak ditemukan dengan kata kunci &quot;{searchApotek}&quot;
                           </td>
                         </tr>
                       ) : (
-                        filteredCustomers.map((cust: any) => {
+                        paginatedCustomers.map((cust: any) => {
                           const isExpanded = expandedCustomer === cust.nama_pelanggan;
                           const invoices = customerInvoices[cust.nama_pelanggan] || [];
                           const isLoadingThis = loadingInvoices[cust.nama_pelanggan];
+                          const currentAccordionQuery = (accordionSearch[cust.nama_pelanggan] || '').toLowerCase().trim();
+
+                          const filteredCustInvoices = currentAccordionQuery
+                            ? invoices.filter(
+                                (inv: any) =>
+                                  inv.nomor_faktur?.toLowerCase().includes(currentAccordionQuery) ||
+                                  inv.no_so?.toLowerCase().includes(currentAccordionQuery) ||
+                                  inv.tanggal?.toLowerCase().includes(currentAccordionQuery)
+                              )
+                            : invoices;
 
                           return (
                             <React.Fragment key={cust.nama_pelanggan}>
@@ -311,7 +344,7 @@ export default function MedicineModal({
                                 <tr className="bg-slate-50 dark:bg-slate-950/90 border-y border-indigo-200 dark:border-indigo-950">
                                   <td colSpan={7} className="p-3 sm:p-4">
                                     <div className="bg-white dark:bg-slate-900/90 border border-indigo-200 dark:border-indigo-500/30 rounded-xl p-3 sm:p-4 shadow-sm dark:shadow-lg space-y-3">
-                                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
                                         <div className="flex items-center gap-2">
                                           <Receipt className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                                           <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -319,9 +352,22 @@ export default function MedicineModal({
                                             <span className="text-sky-600 dark:text-sky-300 font-bold">{cleanHtml(cust.nama_pelanggan)}</span>
                                           </span>
                                         </div>
-                                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                                          Total: <strong className="text-indigo-600 dark:text-indigo-300 font-bold">{invoices.length} Faktur/Transaksi</strong>
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                          <input
+                                            type="text"
+                                            value={accordionSearch[cust.nama_pelanggan] || ''}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              setAccordionSearch((prev) => ({ ...prev, [cust.nama_pelanggan]: val }));
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            placeholder="Filter No Faktur..."
+                                            className="px-2.5 py-1 text-[11px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
+                                          />
+                                          <span className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                            Total: <strong className="text-indigo-600 dark:text-indigo-300 font-bold">{invoices.length} Faktur</strong>
+                                          </span>
+                                        </div>
                                       </div>
 
                                       {isLoadingThis ? (
@@ -329,7 +375,7 @@ export default function MedicineModal({
                                           <Loader2 className="w-4 h-4 animate-spin text-indigo-500 dark:text-indigo-400" />
                                           <span>Mengambil daftar nomor faktur...</span>
                                         </div>
-                                      ) : invoices.length === 0 ? (
+                                      ) : filteredCustInvoices.length === 0 ? (
                                         <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">
                                           Tidak ada faktur ditemukan untuk apotek ini.
                                         </div>
@@ -347,15 +393,18 @@ export default function MedicineModal({
                                                 <th className="py-2 px-3 text-right">Total Nominal</th>
                                               </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                                              {invoices.map((inv: any, idx: number) => {
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                                              {filteredCustInvoices.map((inv: any, idx: number) => {
                                                 const isRetur = Number(inv.is_retur) === 1;
                                                 return (
                                                   <tr key={inv.id || idx} className="hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-colors">
                                                     <td className="py-2 px-3">
                                                       <button
                                                         type="button"
-                                                        onClick={() => onSelectInvoice(inv.nomor_faktur)}
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          onSelectInvoice(inv.nomor_faktur);
+                                                        }}
                                                         className="inline-flex items-center gap-1.5 font-bold font-mono text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-200 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/60 px-2 py-0.5 rounded transition-all"
                                                         title="Klik untuk membuka rincian faktur ini"
                                                       >
@@ -368,7 +417,10 @@ export default function MedicineModal({
                                                         onSelectSO ? (
                                                           <button
                                                             type="button"
-                                                            onClick={() => onSelectSO(inv.no_so)}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              onSelectSO(inv.no_so);
+                                                            }}
                                                             className="hover:text-sky-600 dark:hover:text-sky-300 hover:underline"
                                                           >
                                                             {inv.no_so}
@@ -425,6 +477,34 @@ export default function MedicineModal({
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination for Pharmacies */}
+                {totalCustomerPages > 1 && (
+                  <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                    <span>
+                      Menampilkan {((customerPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(customerPage * ITEMS_PER_PAGE, filteredCustomers.length)} dari {filteredCustomers.length} apotek
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCustomerPage((p) => Math.max(1, p - 1))}
+                        disabled={customerPage === 1}
+                        className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-medium"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
+                      </button>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {customerPage} / {totalCustomerPages}
+                      </span>
+                      <button
+                        onClick={() => setCustomerPage((p) => Math.min(totalCustomerPages, p + 1))}
+                        disabled={customerPage === totalCustomerPages}
+                        className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-medium"
+                      >
+                        Selanjutnya <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

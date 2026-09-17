@@ -373,14 +373,15 @@ export async function getProductDetail(namaBarang: string) {
             FROM transactions
             WHERE nama_barang = ?
             GROUP BY nama_pelanggan
-            ORDER BY total_qty DESC`,
+            ORDER BY total_qty DESC
+            LIMIT 500`,
       args: [namaBarang]
     }),
     client.execute({
       sql: `SELECT * FROM transactions
             WHERE nama_barang = ?
             ORDER BY tanggal DESC, id DESC
-            LIMIT 100`,
+            LIMIT 50`,
       args: [namaBarang]
     })
   ]);
@@ -443,7 +444,8 @@ export async function getCustomerDetail(namaPelanggan: string) {
             FROM transactions
             WHERE nama_pelanggan = ?
             GROUP BY nomor_faktur
-            ORDER BY tanggal DESC`,
+            ORDER BY tanggal DESC
+            LIMIT 200`,
       args: [namaPelanggan]
     })
   ]);
@@ -475,10 +477,70 @@ export async function getProductCustomerInvoices(namaBarang: string, namaPelangg
             keterangan
           FROM transactions
           WHERE nama_barang = ? AND nama_pelanggan = ?
-          ORDER BY tanggal DESC, id DESC`,
+          ORDER BY tanggal DESC, id DESC
+          LIMIT 200`,
     args: [namaBarang, namaPelanggan]
   });
 
   return res.rows;
+}
+
+// 9. Paginated Customer Invoices
+export async function getCustomerInvoices(params: {
+  namaPelanggan: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const client = getClient();
+  const { namaPelanggan, search = '', page = 1, limit = 50 } = params;
+  const offset = (page - 1) * limit;
+
+  const conditions = ['nama_pelanggan = ?'];
+  const queryParams: (string | number)[] = [namaPelanggan];
+
+  if (search.trim()) {
+    const s = `%${search.trim()}%`;
+    conditions.push('(nomor_faktur LIKE ? OR no_so LIKE ? OR tanggal LIKE ?)');
+    queryParams.push(s, s, s);
+  }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+  const countQuery = `
+    SELECT count(DISTINCT nomor_faktur) as total
+    FROM transactions
+    ${whereClause}
+  `;
+
+  const dataQuery = `
+    SELECT
+      nomor_faktur,
+      no_so,
+      tanggal,
+      is_retur,
+      count(*) as item_count,
+      SUM(total_harga) as total_amount
+    FROM transactions
+    ${whereClause}
+    GROUP BY nomor_faktur
+    ORDER BY tanggal DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  const [countRes, dataRes] = await Promise.all([
+    client.execute({ sql: countQuery, args: queryParams }),
+    client.execute({ sql: dataQuery, args: [...queryParams, limit, offset] })
+  ]);
+
+  const total = Number(countRes.rows[0]?.total || 0);
+
+  return {
+    invoices: dataRes.rows,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
 }
 

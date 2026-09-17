@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
 import {
   X,
   Building2,
@@ -10,6 +10,8 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   Receipt,
   RotateCcw,
@@ -35,6 +37,8 @@ function cleanHtml(str: string): string {
     .replace(/&#39;/g, "'");
 }
 
+const ITEMS_PER_PAGE = 50;
+
 export default function CustomerModal({
   customerName,
   onClose,
@@ -46,9 +50,18 @@ export default function CustomerModal({
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'top_products' | 'invoices'>('top_products');
 
-  // Search states
+  // Search states (immediate for input responsiveness)
   const [productSearch, setProductSearch] = useState('');
   const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [accordionSearch, setAccordionSearch] = useState<Record<string, string>>({});
+
+  // Pagination states
+  const [productPage, setProductPage] = useState(1);
+  const [invoicePage, setInvoicePage] = useState(1);
+
+  // Deferred values to ensure zero keystroke lag
+  const deferredProductSearch = useDeferredValue(productSearch);
+  const deferredInvoiceSearch = useDeferredValue(invoiceSearch);
 
   // Accordion for product -> invoices drill down
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
@@ -60,9 +73,12 @@ export default function CustomerModal({
     setLoading(true);
     setProductSearch('');
     setInvoiceSearch('');
+    setProductPage(1);
+    setInvoicePage(1);
     setExpandedProduct(null);
     setProductInvoices({});
     setLoadingProductInvoices({});
+    setAccordionSearch({});
 
     fetch(`/api/pelanggan?name=${encodeURIComponent(customerName)}`)
       .then((res) => res.json())
@@ -71,30 +87,55 @@ export default function CustomerModal({
       .finally(() => setLoading(false));
   }, [customerName]);
 
+  // Reset pagination when search changes
+  useEffect(() => {
+    setProductPage(1);
+  }, [deferredProductSearch]);
+
+  useEffect(() => {
+    setInvoicePage(1);
+  }, [deferredInvoiceSearch]);
+
   // Filtered Products
   const filteredProducts = useMemo(() => {
     if (!data?.top_products) return [];
-    if (!productSearch.trim()) return data.top_products;
-    const q = productSearch.toLowerCase().trim();
+    if (!deferredProductSearch.trim()) return data.top_products;
+    const q = deferredProductSearch.toLowerCase().trim();
     return data.top_products.filter(
       (p: any) =>
         p.nama_barang?.toLowerCase().includes(q) ||
         p.kode_barang?.toLowerCase().includes(q)
     );
-  }, [data, productSearch]);
+  }, [data, deferredProductSearch]);
+
+  // Paginated Products
+  const paginatedProducts = useMemo(() => {
+    const start = (productPage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredProducts, productPage]);
+
+  const totalProductPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
 
   // Filtered Invoices
   const filteredInvoices = useMemo(() => {
     if (!data?.invoices) return [];
-    if (!invoiceSearch.trim()) return data.invoices;
-    const q = invoiceSearch.toLowerCase().trim();
+    if (!deferredInvoiceSearch.trim()) return data.invoices;
+    const q = deferredInvoiceSearch.toLowerCase().trim();
     return data.invoices.filter(
       (inv: any) =>
         inv.nomor_faktur?.toLowerCase().includes(q) ||
         inv.no_so?.toLowerCase().includes(q) ||
         inv.tanggal?.toLowerCase().includes(q)
     );
-  }, [data, invoiceSearch]);
+  }, [data, deferredInvoiceSearch]);
+
+  // Paginated Invoices
+  const paginatedInvoices = useMemo(() => {
+    const start = (invoicePage - 1) * ITEMS_PER_PAGE;
+    return filteredInvoices.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredInvoices, invoicePage]);
+
+  const totalInvoicePages = Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE) || 1;
 
   // Toggle Accordion on Product to fetch its specific Invoices (Ref INV)
   const handleToggleProduct = async (productName: string) => {
@@ -165,7 +206,7 @@ export default function CustomerModal({
             <span className="text-sm font-medium">Memuat profil & riwayat transaksi apotek...</span>
           </div>
         ) : data ? (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
             {/* KPI Summary Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -216,7 +257,7 @@ export default function CustomerModal({
                 }`}
               >
                 <FileText className="w-4 h-4" />
-                Riwayat Faktur ({data.invoices?.length || 0})
+                Riwayat Faktur ({data.summary?.total_invoices || data.invoices?.length || 0})
               </button>
             </div>
 
@@ -263,17 +304,27 @@ export default function CustomerModal({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
-                        {filteredProducts.length === 0 ? (
+                        {paginatedProducts.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500">
                               Obat tidak ditemukan dengan kata kunci &quot;{productSearch}&quot;
                             </td>
                           </tr>
                         ) : (
-                          filteredProducts.map((prod: any) => {
+                          paginatedProducts.map((prod: any) => {
                             const isExpanded = expandedProduct === prod.nama_barang;
                             const invoices = productInvoices[prod.nama_barang] || [];
                             const isLoadingThis = loadingProductInvoices[prod.nama_barang];
+                            const currentAccordionQuery = (accordionSearch[prod.nama_barang] || '').toLowerCase().trim();
+
+                            const filteredProductInvoices = currentAccordionQuery
+                              ? invoices.filter(
+                                  (inv: any) =>
+                                    inv.nomor_faktur?.toLowerCase().includes(currentAccordionQuery) ||
+                                    inv.no_so?.toLowerCase().includes(currentAccordionQuery) ||
+                                    inv.tanggal?.toLowerCase().includes(currentAccordionQuery)
+                                )
+                              : invoices;
 
                             return (
                               <React.Fragment key={prod.nama_barang}>
@@ -345,16 +396,29 @@ export default function CustomerModal({
                                   <tr className="bg-slate-50 dark:bg-slate-950/90 border-y border-sky-200 dark:border-sky-950">
                                     <td colSpan={6} className="p-3 sm:p-4">
                                       <div className="bg-white dark:bg-slate-900/90 border border-sky-200 dark:border-sky-500/30 rounded-xl p-3 sm:p-4 shadow-sm dark:shadow-lg space-y-3">
-                                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
                                           <div className="flex items-center gap-2">
                                             <Receipt className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                                             <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                                               Daftar Faktur (Ref INV) Pembelian &quot;{cleanHtml(prod.nama_barang)}&quot;
                                             </span>
                                           </div>
-                                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                                            Total: <strong className="text-sky-600 dark:text-sky-300 font-bold">{invoices.length} Faktur / Ref INV</strong>
-                                          </span>
+                                          <div className="flex items-center gap-2">
+                                            <input
+                                              type="text"
+                                              value={accordionSearch[prod.nama_barang] || ''}
+                                              onChange={(e) => {
+                                                const val = e.target.value;
+                                                setAccordionSearch((prev) => ({ ...prev, [prod.nama_barang]: val }));
+                                              }}
+                                              onClick={(e) => e.stopPropagation()}
+                                              placeholder="Filter Ref INV..."
+                                              className="px-2.5 py-1 text-[11px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:border-sky-500"
+                                            />
+                                            <span className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                              Total: <strong className="text-sky-600 dark:text-sky-300 font-bold">{invoices.length} Ref INV</strong>
+                                            </span>
+                                          </div>
                                         </div>
 
                                         {isLoadingThis ? (
@@ -362,7 +426,7 @@ export default function CustomerModal({
                                             <Loader2 className="w-4 h-4 animate-spin text-sky-500 dark:text-sky-400" />
                                             <span>Mengambil daftar nomor faktur...</span>
                                           </div>
-                                        ) : invoices.length === 0 ? (
+                                        ) : filteredProductInvoices.length === 0 ? (
                                           <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500">
                                             Tidak ada faktur ditemukan untuk obat ini.
                                           </div>
@@ -381,14 +445,17 @@ export default function CustomerModal({
                                                 </tr>
                                               </thead>
                                               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                                                {invoices.map((inv: any, idx: number) => {
+                                                {filteredProductInvoices.map((inv: any, idx: number) => {
                                                   const isRetur = Number(inv.is_retur) === 1;
                                                   return (
                                                     <tr key={inv.id || idx} className="hover:bg-sky-50/50 dark:hover:bg-sky-950/20 transition-colors">
                                                       <td className="py-2 px-3">
                                                         <button
                                                           type="button"
-                                                          onClick={() => onSelectInvoice(inv.nomor_faktur)}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onSelectInvoice(inv.nomor_faktur);
+                                                          }}
                                                           className="inline-flex items-center gap-1.5 font-bold font-mono text-sky-700 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-200 bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900/60 border border-sky-200 dark:border-sky-800/60 px-2 py-0.5 rounded transition-all"
                                                           title="Buka rincian faktur ini"
                                                         >
@@ -401,7 +468,10 @@ export default function CustomerModal({
                                                           onSelectSO ? (
                                                             <button
                                                               type="button"
-                                                              onClick={() => onSelectSO(inv.no_so)}
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onSelectSO(inv.no_so);
+                                                              }}
                                                               className="hover:text-sky-600 dark:hover:text-sky-300 hover:underline"
                                                             >
                                                               {inv.no_so}
@@ -458,16 +528,44 @@ export default function CustomerModal({
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Pagination for Products */}
+                  {totalProductPages > 1 && (
+                    <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                      <span>
+                        Menampilkan {((productPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(productPage * ITEMS_PER_PAGE, filteredProducts.length)} dari {filteredProducts.length} obat
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setProductPage((p) => Math.max(1, p - 1))}
+                          disabled={productPage === 1}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-medium"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
+                        </button>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {productPage} / {totalProductPages}
+                        </span>
+                        <button
+                          onClick={() => setProductPage((p) => Math.min(totalProductPages, p + 1))}
+                          disabled={productPage === totalProductPages}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-medium"
+                        >
+                          Selanjutnya <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Tab 2: Invoices List with Instant Search */}
+            {/* Tab 2: Invoices List with Instant Search & Pagination */}
             {activeTab === 'invoices' && (
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="text-xs text-slate-500 dark:text-slate-400">
-                    Menampilkan seluruh riwayat faktur yang diterbitkan untuk apotek ini.
+                    Menampilkan riwayat faktur yang diterbitkan untuk apotek ini.
                   </div>
 
                   {/* Instant Search Bar for Invoices */}
@@ -505,14 +603,14 @@ export default function CustomerModal({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
-                        {filteredInvoices.length === 0 ? (
+                        {paginatedInvoices.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500">
                               Faktur tidak ditemukan dengan kata kunci &quot;{invoiceSearch}&quot;
                             </td>
                           </tr>
                         ) : (
-                          filteredInvoices.map((inv: any) => (
+                          paginatedInvoices.map((inv: any) => (
                             <tr key={inv.nomor_faktur} className="hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors">
                               <td className="py-2 px-3 font-semibold text-slate-800 dark:text-slate-200 font-mono">
                                 <button
@@ -563,6 +661,34 @@ export default function CustomerModal({
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Pagination for Invoices */}
+                  {totalInvoicePages > 1 && (
+                    <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                      <span>
+                        Menampilkan {((invoicePage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(invoicePage * ITEMS_PER_PAGE, filteredInvoices.length)} dari {filteredInvoices.length} faktur
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setInvoicePage((p) => Math.max(1, p - 1))}
+                          disabled={invoicePage === 1}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-medium"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
+                        </button>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {invoicePage} / {totalInvoicePages}
+                        </span>
+                        <button
+                          onClick={() => setInvoicePage((p) => Math.min(totalInvoicePages, p + 1))}
+                          disabled={invoicePage === totalInvoicePages}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-medium"
+                        >
+                          Selanjutnya <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
