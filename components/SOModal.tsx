@@ -99,6 +99,9 @@ export default function SOModal({
                 <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm mt-1 block">
                   Rp {(data.total_nominal || 0).toLocaleString('id-ID')}
                 </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                  Grand: <strong>Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}</strong> (+PPN 11%)
+                </span>
               </div>
             </div>
 
@@ -124,7 +127,10 @@ export default function SOModal({
                         )}
                       </div>
                       <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {inv.total_items} items &bull; <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Rp {(inv.total_nominal || 0).toLocaleString('id-ID')}</span>
+                        {inv.total_items} items &bull; DPP: <span className="font-semibold text-slate-700 dark:text-slate-300">Rp {(inv.total_nominal || 0).toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        Grand (+PPN 11%): Rp {Math.round((inv.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
                       </div>
                     </div>
                     <button

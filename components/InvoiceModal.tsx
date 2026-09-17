@@ -230,55 +230,78 @@ export default function InvoiceModal({
                         <th className="py-2.5 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold">
                           Harga Satuan (Ref INV)
                         </th>
-                        <th className="py-2.5 px-3 text-right">Total Nilai</th>
+                        <th className="py-2.5 px-3 text-right">Subtotal (DPP)</th>
+                        <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold">
+                          Grand Total (+PPN 11%)
+                        </th>
                         <th className="py-2.5 px-3 text-center">Aksi Retur</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
-                      {data.items?.map((it: any, idx: number) => (
-                        <tr key={it.id || idx} className="hover:bg-slate-100/60 dark:hover:bg-slate-900/60 transition-colors">
-                          <td className="py-2 px-3 text-slate-400 dark:text-slate-500">{idx + 1}</td>
-                          <td className="py-2 px-3 font-mono text-slate-500 dark:text-slate-400">{it.kode_barang || '-'}</td>
-                          <td className="py-2 px-3">
-                            <button
-                              onClick={() => onSelectProduct(it.nama_barang)}
-                              className="text-left font-semibold text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline transition-colors"
-                            >
-                              {cleanHtml(it.nama_barang)}
-                            </button>
-                          </td>
-                          <td className={`py-2 px-3 text-right font-bold ${it.kuantitas < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                            {it.kuantitas}
-                          </td>
-                          <td className="py-2 px-3 text-slate-500 dark:text-slate-400">{it.satuan}</td>
-                          <td className="py-2 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-mono font-bold text-emerald-700 dark:text-emerald-300">
-                            Rp {(Number(it.harga_satuan) || 0).toLocaleString('id-ID')}
-                          </td>
-                          <td className={`py-2 px-3 text-right font-semibold ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                            Rp {(Number(it.total_harga) || 0).toLocaleString('id-ID')}
-                          </td>
-                          <td className="py-2 px-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenSingleItemRetur(it)}
-                              className="px-2 py-1 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 mx-auto"
-                              title="Hitung retur untuk item ini"
-                            >
-                              <RotateCcw className="w-3 h-3" />
-                              <span>Retur</span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {data.items?.map((it: any, idx: number) => {
+                        const itemSubtotal = Number(it.total_harga) || 0;
+                        const itemGrandTotal = Math.round(itemSubtotal * 1.11);
+                        return (
+                          <tr key={it.id || idx} className="hover:bg-slate-100/60 dark:hover:bg-slate-900/60 transition-colors">
+                            <td className="py-2 px-3 text-slate-400 dark:text-slate-500">{idx + 1}</td>
+                            <td className="py-2 px-3 font-mono text-slate-500 dark:text-slate-400">{it.kode_barang || '-'}</td>
+                            <td className="py-2 px-3">
+                              <button
+                                onClick={() => onSelectProduct(it.nama_barang)}
+                                className="text-left font-semibold text-slate-800 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline transition-colors"
+                              >
+                                {cleanHtml(it.nama_barang)}
+                              </button>
+                            </td>
+                            <td className={`py-2 px-3 text-right font-bold ${it.kuantitas < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                              {it.kuantitas}
+                            </td>
+                            <td className="py-2 px-3 text-slate-500 dark:text-slate-400">{it.satuan}</td>
+                            <td className="py-2 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                              Rp {(Number(it.harga_satuan) || 0).toLocaleString('id-ID')}
+                            </td>
+                            <td className={`py-2 px-3 text-right font-semibold whitespace-nowrap ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                              Rp {itemSubtotal.toLocaleString('id-ID')}
+                            </td>
+                            <td className={`py-2 px-3 text-right font-mono font-bold whitespace-nowrap bg-indigo-500/5 dark:bg-indigo-950/20 ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                              Rp {itemGrandTotal.toLocaleString('id-ID')}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenSingleItemRetur(it)}
+                                className="px-2 py-1 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 mx-auto"
+                                title="Hitung retur untuk item ini"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                <span>Retur</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot className="bg-slate-100 dark:bg-slate-950 font-semibold border-t border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
                       <tr>
-                        <td colSpan={3} className="py-3 px-3 text-right">Total Keseluruhan Faktur:</td>
-                        <td className="py-3 px-3 text-right text-indigo-600 dark:text-indigo-300 font-bold">{data.total_qty}</td>
+                        <td colSpan={3} className="py-2.5 px-3 text-right">Total Fisik:</td>
+                        <td className="py-2.5 px-3 text-right text-indigo-600 dark:text-indigo-300 font-bold">{data.total_qty}</td>
                         <td></td>
-                        <td></td>
-                        <td className="py-3 px-3 text-right text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                        <td className="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400 text-xs">Subtotal (DPP):</td>
+                        <td className="py-2.5 px-3 text-right font-semibold text-slate-800 dark:text-slate-200">
                           Rp {(data.total_nominal || 0).toLocaleString('id-ID')}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 font-extrabold text-sm whitespace-nowrap">
+                          Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
+                        </td>
+                        <td></td>
+                      </tr>
+                      <tr className="border-t border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
+                        <td colSpan={6} className="py-2 px-3 text-right">PPN 11%:</td>
+                        <td className="py-2 px-3 text-right font-mono">
+                          Rp {Math.round((data.total_nominal || 0) * 0.11).toLocaleString('id-ID')}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold text-indigo-600 dark:text-indigo-400">
+                          (Termasuk PPN 11%)
                         </td>
                         <td></td>
                       </tr>

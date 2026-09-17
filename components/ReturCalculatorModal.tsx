@@ -127,17 +127,24 @@ export default function ReturCalculatorModal({
 
     returList.forEach((it, idx) => {
       const subtotal = Number(it.qty_retur || 0) * Number(it.harga_satuan || 0);
+      const grandItem = Math.round(subtotal * 1.11);
       text += `${idx + 1}. [${it.kode_barang || '-'}] ${cleanHtml(it.nama_barang)}\n`;
       text += `   - Qty Retur: ${it.qty_retur} ${it.satuan} (dari beli: ${it.qty_beli} ${it.satuan})\n`;
       text += `   - Harga Satuan Ref INV: Rp ${Number(it.harga_satuan).toLocaleString('id-ID')}\n`;
-      text += `   - Subtotal Retur: Rp ${Math.round(subtotal).toLocaleString('id-ID')}\n`;
+      text += `   - Subtotal (DPP): Rp ${Math.round(subtotal).toLocaleString('id-ID')}\n`;
+      text += `   - Grand Total (+PPN 11%): Rp ${grandItem.toLocaleString('id-ID')}\n`;
       if (it.nomor_faktur && it.nomor_faktur !== invoiceNumber) {
         text += `   - Ref Faktur: ${it.nomor_faktur}\n`;
       }
     });
 
+    const ppnNominal = Math.round(totalNominalRetur * 0.11);
+    const grandNominal = Math.round(totalNominalRetur * 1.11);
+
     text += `-------------------------------------------\n`;
-    text += `*TOTAL NILAI RETUR: Rp ${Math.round(totalNominalRetur).toLocaleString('id-ID')}*\n`;
+    text += `Subtotal Retur (DPP): Rp ${Math.round(totalNominalRetur).toLocaleString('id-ID')}\n`;
+    text += `PPN 11%: Rp ${ppnNominal.toLocaleString('id-ID')}\n`;
+    text += `*GRAND TOTAL RETUR (Inc. PPN 11%): Rp ${grandNominal.toLocaleString('id-ID')}*\n`;
     text += `Total Fisik: ${totalQtyRetur} unit (${returList.length} jenis obat)\n`;
     text += `-------------------------------------------`;
 
@@ -150,6 +157,9 @@ export default function ReturCalculatorModal({
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
+
+  const ppnTotal = Math.round(totalNominalRetur * 0.11);
+  const grandTotalAll = Math.round(totalNominalRetur * 1.11);
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
@@ -166,11 +176,11 @@ export default function ReturCalculatorModal({
                   Kalkulator &amp; Pengajuan Retur
                 </h2>
                 <span className="px-2 py-0.5 text-xs font-bold bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded">
-                  Hitung Sesuai Ref INV
+                  Termasuk PPN 11%
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Hitung nilai pengembalian obat berdasarkan harga satuan asli faktur
+                Hitung nilai pengembalian obat berdasarkan harga satuan asli faktur + PPN 11%
               </p>
             </div>
           </div>
@@ -258,20 +268,24 @@ export default function ReturCalculatorModal({
                   <th className="py-2.5 px-3 text-right bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold">
                     Harga Satuan Ref INV
                   </th>
-                  <th className="py-2.5 px-3 text-right">Subtotal Retur</th>
+                  <th className="py-2.5 px-3 text-right">Subtotal (DPP)</th>
+                  <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold">
+                    Grand Total (+PPN 11%)
+                  </th>
                   <th className="py-2.5 px-3 text-center w-10">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
                 {returList.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-slate-400 dark:text-slate-500">
+                    <td colSpan={8} className="py-10 text-center text-slate-400 dark:text-slate-500">
                       Belum ada item yang dipilih untuk retur.
                     </td>
                   </tr>
                 ) : (
                   returList.map((it, idx) => {
                     const subtotal = Number(it.qty_retur || 0) * Number(it.harga_satuan || 0);
+                    const grandItem = Math.round(subtotal * 1.11);
                     return (
                       <tr key={it.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors">
                         <td className="py-2.5 px-3 text-slate-400 font-medium">{idx + 1}</td>
@@ -337,9 +351,14 @@ export default function ReturCalculatorModal({
                           Rp {(Number(it.harga_satuan) || 0).toLocaleString('id-ID')}
                         </td>
 
-                        {/* Subtotal Retur */}
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                        {/* Subtotal Retur (DPP) */}
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                           Rp {Math.round(subtotal).toLocaleString('id-ID')}
+                        </td>
+
+                        {/* Grand Total Retur (+PPN 11%) */}
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap bg-indigo-500/5 dark:bg-indigo-950/20">
+                          Rp {grandItem.toLocaleString('id-ID')}
                         </td>
 
                         {/* Hapus Item */}
@@ -360,15 +379,28 @@ export default function ReturCalculatorModal({
               </tbody>
               <tfoot className="bg-slate-100 dark:bg-slate-950 font-semibold border-t border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
                 <tr>
-                  <td colSpan={3} className="py-3 px-3 text-right">
-                    Total Retur:
+                  <td colSpan={3} className="py-2.5 px-3 text-right">
+                    Total Fisik:
                   </td>
-                  <td className="py-3 px-3 text-center font-bold text-slate-800 dark:text-slate-200">
+                  <td className="py-2.5 px-3 text-center font-bold text-indigo-600 dark:text-indigo-400">
                     {totalQtyRetur} Unit ({returList.length} Item)
                   </td>
-                  <td></td>
-                  <td className="py-3 px-3 text-right font-mono text-base font-extrabold text-rose-600 dark:text-rose-400">
+                  <td className="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400 text-xs">Subtotal (DPP):</td>
+                  <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200">
                     Rp {Math.round(totalNominalRetur).toLocaleString('id-ID')}
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono text-base font-extrabold text-rose-600 dark:text-rose-400">
+                    Rp {grandTotalAll.toLocaleString('id-ID')}
+                  </td>
+                  <td></td>
+                </tr>
+                <tr className="border-t border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
+                  <td colSpan={5} className="py-2 px-3 text-right">PPN 11%:</td>
+                  <td className="py-2 px-3 text-right font-mono">
+                    Rp {ppnTotal.toLocaleString('id-ID')}
+                  </td>
+                  <td className="py-2 px-3 text-right font-bold text-indigo-600 dark:text-indigo-400">
+                    (Termasuk PPN 11%)
                   </td>
                   <td></td>
                 </tr>
@@ -380,23 +412,28 @@ export default function ReturCalculatorModal({
           <div className="bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 p-3 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
             <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <strong>Kesesuaian Harga Satuan:</strong> Harga satuan dihitung otomatis persis sesuai faktur pembelian asli (Ref INV). Nilai retur bersih adalah <code>Qty Retur × Harga Satuan Faktur</code>.
+              <strong>Kesesuaian Harga Satuan &amp; PPN 11%:</strong> Harga satuan diambil persis sesuai faktur pembelian asli (Ref INV). Subtotal adalah DPP (sebelum PPN), dan <strong>Grand Total</strong> adalah total pengembalian dana setelah ditambah PPN 11% (<code>Subtotal × 1.11</code>).
             </div>
           </div>
 
           {/* Retur Summary Card */}
-          <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-rose-500 text-white rounded-lg">
-                <Receipt className="w-5 h-5" />
+              <div className="p-2.5 bg-rose-500 text-white rounded-xl shadow-md shadow-rose-500/20">
+                <Receipt className="w-6 h-6" />
               </div>
               <div>
                 <span className="text-xs font-semibold text-rose-800 dark:text-rose-300 block">
-                  Estimasi Nilai Pengembalian Dana / Potong Faktur
+                  Grand Total Estimasi Pengembalian Dana / Potong Faktur (Inc. PPN 11%)
                 </span>
-                <span className="text-xl sm:text-2xl font-black font-mono text-rose-700 dark:text-rose-400">
-                  Rp {Math.round(totalNominalRetur).toLocaleString('id-ID')}
-                </span>
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <span className="text-xl sm:text-2xl font-black font-mono text-rose-700 dark:text-rose-400">
+                    Rp {grandTotalAll.toLocaleString('id-ID')}
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                    (DPP: Rp {Math.round(totalNominalRetur).toLocaleString('id-ID')} + PPN 11%: Rp {ppnTotal.toLocaleString('id-ID')})
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -405,7 +442,7 @@ export default function ReturCalculatorModal({
                 type="button"
                 onClick={handleCopy}
                 disabled={returList.length === 0}
-                className="flex-1 sm:flex-none px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                className="flex-1 sm:flex-none px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
                 {copied ? (
                   <>

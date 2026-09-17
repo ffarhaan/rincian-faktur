@@ -112,7 +112,9 @@ export default function TransactionTable({
       'Qty': r.kuantitas,
       'Satuan': r.satuan,
       'Harga Satuan': r.harga_satuan,
-      'Total Harga': r.total_harga,
+      'Total (DPP)': r.total_harga,
+      'PPN 11%': Math.round((r.total_harga || 0) * 0.11),
+      'Grand Total (Inc. PPN 11%)': Math.round((r.total_harga || 0) * 1.11),
       'Kategori': r.category,
       'Keterangan': cleanHtml(r.keterangan),
     }));
@@ -258,9 +260,12 @@ export default function TransactionTable({
                   className="py-3 px-3 text-right cursor-pointer hover:text-slate-900 dark:hover:text-slate-200"
                 >
                   <div className="flex items-center justify-end gap-1">
-                    <span>Total</span>
+                    <span>Total (DPP)</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                   </div>
+                </th>
+                <th className="py-3 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 font-bold whitespace-nowrap">
+                  Grand Total (+PPN 11%)
                 </th>
                 <th className="py-3 px-3 text-center">Kat</th>
                 <th className="py-3 px-3 text-center">Aksi Retur</th>
@@ -269,20 +274,22 @@ export default function TransactionTable({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={11} className="py-16 text-center text-slate-400">
+                  <td colSpan={12} className="py-16 text-center text-slate-400">
                     <div className="inline-block animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full mb-2" />
                     <p className="text-xs">Memuat data dari database...</p>
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-16 text-center text-slate-400 text-xs">
+                  <td colSpan={12} className="py-16 text-center text-slate-400 text-xs">
                     Tidak ada data transaksi yang ditemukan.
                   </td>
                 </tr>
               ) : (
                 rows.map((r) => {
                   const isRetur = r.is_retur === 1;
+                  const subtotal = Number(r.total_harga) || 0;
+                  const grandTotal = Math.round(subtotal * 1.11);
                   return (
                     <tr
                       key={r.id}
@@ -353,9 +360,14 @@ export default function TransactionTable({
                         Rp {(r.harga_satuan || 0).toLocaleString('id-ID')}
                       </td>
 
-                      {/* Total Harga */}
-                      <td className={`py-2.5 px-3 text-right font-semibold ${isRetur ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                        Rp {(r.total_harga || 0).toLocaleString('id-ID')}
+                      {/* Total Harga (DPP) */}
+                      <td className={`py-2.5 px-3 text-right font-semibold whitespace-nowrap ${isRetur ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                        Rp {subtotal.toLocaleString('id-ID')}
+                      </td>
+
+                      {/* Grand Total (Inc. PPN 11%) */}
+                      <td className={`py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap bg-indigo-500/5 dark:bg-indigo-950/20 ${isRetur ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        Rp {grandTotal.toLocaleString('id-ID')}
                       </td>
 
                       {/* Kategori */}

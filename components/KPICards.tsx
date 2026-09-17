@@ -66,28 +66,28 @@ export default function KPICards({
         {/* Omset Penjualan */}
         <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/90 p-4 rounded-2xl shadow-sm dark:shadow-lg dark:shadow-black/20">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs mb-1.5 font-medium">
-            <span>Omset Penjualan</span>
+            <span>Omset Penjualan (DPP)</span>
             <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 truncate">
             Rp {Math.round(summary.omset_penjualan || 0).toLocaleString('id-ID')}
           </div>
-          <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-            {(summary.total_qty_sales || 0).toLocaleString('id-ID')} unit terjual
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">
+            Grand: <strong className="text-slate-700 dark:text-slate-200 font-bold">Rp {Math.round((summary.omset_penjualan || 0) * 1.11).toLocaleString('id-ID')}</strong> (+PPN 11%)
           </div>
         </div>
 
         {/* Total Retur */}
         <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/90 p-4 rounded-2xl shadow-sm dark:shadow-lg dark:shadow-black/20">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs mb-1.5 font-medium">
-            <span>Total Retur</span>
+            <span>Total Retur (DPP)</span>
             <RotateCcw className="w-4 h-4 text-rose-600 dark:text-rose-400" />
           </div>
           <div className="text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400 truncate">
             Rp {Math.abs(Math.round(summary.total_retur || 0)).toLocaleString('id-ID')}
           </div>
-          <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-            {(summary.total_qty_retur || 0).toLocaleString('id-ID')} unit diretur
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">
+            Grand: <strong className="text-slate-700 dark:text-slate-200 font-bold">Rp {Math.round(Math.abs(summary.total_retur || 0) * 1.11).toLocaleString('id-ID')}</strong> (+PPN 11%)
           </div>
         </div>
 
