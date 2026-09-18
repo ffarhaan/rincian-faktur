@@ -482,7 +482,7 @@ export default function CustomerModal({
                           <th className="py-2.5 px-3 text-center min-w-[75px]">Tipe</th>
                           <th className="py-2.5 px-3 min-w-[160px]">No. SO</th>
                           {onSimulateReturn && (
-                            <th className="py-2.5 px-2 w-20 text-center">Simulasi</th>
+                            <th className="py-2.5 px-2 w-20 text-center">Retur</th>
                           )}
                         </tr>
                       </thead>
@@ -656,7 +656,7 @@ export default function CustomerModal({
                                         ])
                                       }
                                       className="px-2 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-lg text-[11px] font-bold transition-all shadow-2xs"
-                                      title="Simulasikan retur untuk item ini"
+                                      title="Buat retur untuk obat ini"
                                     >
                                       + Retur
                                     </button>

@@ -211,10 +211,10 @@ export default function InvoiceModal({
                       type="button"
                       onClick={handleSimulateInvoice}
                       className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm group"
-                      title="Masukkan semua barang dari faktur ini ke dalam simulasi retur"
+                      title="Masukkan seluruh barang dari faktur ini untuk membuat dokumen retur"
                     >
                       <RotateCcw className="w-3.5 h-3.5 group-hover:-rotate-45 transition-transform" />
-                      <span>⚡ Simulasikan Retur Faktur Ini</span>
+                      <span>⚡ Buat Retur Faktur Ini</span>
                     </button>
                   )}
                 </div>
@@ -239,7 +239,7 @@ export default function InvoiceModal({
                             Grand Total (+PPN 11%)
                           </th>
                           {onSimulateReturn && (
-                            <th className="py-2.5 px-2 w-20 text-center">Simulasi</th>
+                            <th className="py-2.5 px-2 w-20 text-center">Retur</th>
                           )}
                         </tr>
                       </thead>

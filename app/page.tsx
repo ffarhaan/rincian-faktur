@@ -9,7 +9,7 @@ import InvoiceModal from '@/components/InvoiceModal';
 import SOModal from '@/components/SOModal';
 import MedicineModal from '@/components/MedicineModal';
 import CustomerModal from '@/components/CustomerModal';
-import ReturnSimulationModal, { SimulationItem } from '@/components/ReturnSimulationModal';
+import ReturnModal, { ReturnItem, SimulationItem } from '@/components/ReturnModal';
 
 export default function Home() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -232,15 +232,15 @@ export default function Home() {
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-2">
-            {/* Simulasi Retur Quick Button in Top Bar */}
+            {/* Retur Barang Quick Button in Top Bar */}
             <button
               type="button"
               onClick={() => setIsSimulationOpen(true)}
               className="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/70 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-xl transition-all shadow-xs flex items-center gap-1.5 text-xs font-bold"
-              title="Buka Simulasi & Estimasi Retur"
+              title="Buka Formulir & Dokumen Retur Barang"
             >
               <RotateCcw className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-              <span>Simulasi Retur</span>
+              <span>Retur Barang</span>
               {simulationItems.length > 0 && (
                 <span className="px-1.5 py-0.2 text-[10px] font-extrabold bg-rose-600 text-white rounded-full">
                   {simulationItems.length}
@@ -301,10 +301,10 @@ export default function Home() {
               </div>
               <div className="min-w-0">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                  <span>⚡ Quick Retur per Nomor Faktur:</span>
+                  <span>⚡ Buat Retur Cepat per Nomor Faktur:</span>
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
-                  Ketik No. INV untuk langsung memunculkan semua barang &amp; harga (+PPN 11%)
+                  Ketik No. INV untuk langsung memuat semua barang &amp; menerbitkan dokumen retur (+PPN 11%)
                 </span>
               </div>
             </div>
@@ -346,10 +346,10 @@ export default function Home() {
                 }}
                 disabled={loadingQuickRetur}
                 className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs flex-shrink-0 disabled:opacity-50"
-                title="Langsung tampilkan seluruh barang dari faktur ini untuk simulasi retur"
+                title="Langsung tampilkan seluruh barang dari faktur ini untuk membuat dokumen retur"
               >
                 <RotateCcw className={`w-3.5 h-3.5 ${loadingQuickRetur ? 'animate-spin' : ''}`} />
-                <span>{loadingQuickRetur ? 'Memuat...' : 'Simulasi'}</span>
+                <span>{loadingQuickRetur ? 'Memuat...' : 'Buat Retur'}</span>
               </button>
             </div>
           </div>
@@ -438,8 +438,8 @@ export default function Home() {
         />
       )}
 
-      {/* Return Simulation Modal */}
-      <ReturnSimulationModal
+      {/* Return Document & Form Modal */}
+      <ReturnModal
         isOpen={isSimulationOpen}
         onClose={() => setIsSimulationOpen(false)}
         items={simulationItems}
@@ -447,7 +447,7 @@ export default function Home() {
         onUpdateItemReason={handleUpdateItemReason}
         onRemoveItem={handleRemoveSimulationItem}
         onClearAll={handleClearAllSimulation}
-        onAddSimulationItems={handleSimulateReturn}
+        onAddReturnItems={handleSimulateReturn}
         onLoadInvoice={handleSimulateInvoiceByNumber}
         onSelectInvoice={(inv) => {
           setIsSimulationOpen(false);
