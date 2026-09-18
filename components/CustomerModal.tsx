@@ -27,6 +27,7 @@ interface CustomerModalProps {
   onSelectInvoice: (inv: string) => void;
   onSelectProduct: (prod: string) => void;
   onSelectSO?: (so: string) => void;
+  onSimulateReturn?: (items: any[]) => void;
 }
 
 function cleanHtml(str: string): string {
@@ -47,6 +48,7 @@ export default function CustomerModal({
   onSelectInvoice,
   onSelectProduct,
   onSelectSO,
+  onSimulateReturn,
 }: CustomerModalProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -479,19 +481,22 @@ export default function CustomerModal({
                           </th>
                           <th className="py-2.5 px-3 text-center min-w-[75px]">Tipe</th>
                           <th className="py-2.5 px-3 min-w-[160px]">No. SO</th>
+                          {onSimulateReturn && (
+                            <th className="py-2.5 px-2 w-20 text-center">Simulasi</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                         {loadingItems ? (
                           <tr>
-                            <td colSpan={13} className="py-16 text-center text-slate-400">
+                            <td colSpan={onSimulateReturn ? 14 : 13} className="py-16 text-center text-slate-400">
                               <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto mb-2" />
                               <span>Mencari rincian faktur &amp; harga satuan...</span>
                             </td>
                           </tr>
                         ) : itemData.items.length === 0 ? (
                           <tr>
-                            <td colSpan={13} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                            <td colSpan={onSimulateReturn ? 14 : 13} className="py-12 text-center text-slate-400 dark:text-slate-500">
                               {itemSearch
                                 ? `Tidak ada transaksi yang cocok dengan kata kunci "${itemSearch}"`
                                 : 'Tidak ada riwayat pembelian untuk apotek ini.'}
@@ -627,6 +632,36 @@ export default function CustomerModal({
                                     '-'
                                   )}
                                 </td>
+
+                                {/* Simulasi Retur Action */}
+                                {onSimulateReturn && (
+                                  <td className="py-2 px-2 text-center whitespace-nowrap">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onSimulateReturn([
+                                          {
+                                            id: it.id,
+                                            nomor_faktur: it.nomor_faktur,
+                                            tanggal: it.tanggal,
+                                            nama_pelanggan: customerName || '',
+                                            kode_barang: it.kode_barang,
+                                            nama_barang: it.nama_barang,
+                                            satuan: it.satuan,
+                                            harga_satuan: Number(it.harga_satuan) || 0,
+                                            qty_beli: Math.abs(Number(it.kuantitas) || 0),
+                                            qty_retur: 1,
+                                            alasan: '',
+                                          },
+                                        ])
+                                      }
+                                      className="px-2 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-lg text-[11px] font-bold transition-all shadow-2xs"
+                                      title="Simulasikan retur untuk item ini"
+                                    >
+                                      + Retur
+                                    </button>
+                                  </td>
+                                )}
                               </tr>
                             );
                           })

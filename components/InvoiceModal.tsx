@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Receipt,
   CheckCircle2,
+  RotateCcw,
 } from 'lucide-react';
 
 interface InvoiceModalProps {
@@ -20,6 +21,7 @@ interface InvoiceModalProps {
   onSelectCustomer: (cust: string) => void;
   onSelectProduct: (prod: string) => void;
   onSelectInvoice?: (inv: string) => void;
+  onSimulateReturn?: (items: any[]) => void;
 }
 
 function cleanHtml(str: string): string {
@@ -39,9 +41,46 @@ export default function InvoiceModal({
   onSelectCustomer,
   onSelectProduct,
   onSelectInvoice,
+  onSimulateReturn,
 }: InvoiceModalProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleSimulateInvoice = () => {
+    if (!data?.items || !onSimulateReturn) return;
+    const simItems = data.items.map((it: any) => ({
+      id: it.id || `${data.nomor_faktur}-${it.kode_barang || it.nama_barang}`,
+      nomor_faktur: data.nomor_faktur,
+      tanggal: data.tanggal,
+      nama_pelanggan: data.nama_pelanggan,
+      kode_barang: it.kode_barang,
+      nama_barang: it.nama_barang,
+      satuan: it.satuan,
+      harga_satuan: Number(it.harga_satuan) || 0,
+      qty_beli: Math.abs(Number(it.kuantitas) || 0),
+      qty_retur: 1,
+      alasan: '',
+    }));
+    onSimulateReturn(simItems);
+  };
+
+  const handleSimulateSingleItem = (it: any) => {
+    if (!onSimulateReturn) return;
+    const simItem = {
+      id: it.id || `${data?.nomor_faktur}-${it.kode_barang || it.nama_barang}`,
+      nomor_faktur: data?.nomor_faktur || '',
+      tanggal: data?.tanggal || '',
+      nama_pelanggan: data?.nama_pelanggan || '',
+      kode_barang: it.kode_barang,
+      nama_barang: it.nama_barang,
+      satuan: it.satuan,
+      harga_satuan: Number(it.harga_satuan) || 0,
+      qty_beli: Math.abs(Number(it.kuantitas) || 0),
+      qty_retur: 1,
+      alasan: '',
+    };
+    onSimulateReturn([simItem]);
+  };
 
   useEffect(() => {
     if (!invoiceNumber) return;
@@ -154,22 +193,36 @@ export default function InvoiceModal({
 
               {/* Items Table Section */}
               <div>
-                <div className="flex items-center justify-between mb-2.5">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <span>Daftar Barang &amp; Harga (+PPN 11%)</span>
-                    <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 rounded-full font-mono">
-                      {data.items?.length || 0} item
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <span>Daftar Barang &amp; Harga (+PPN 11%)</span>
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 rounded-full font-mono">
+                        {data.items?.length || 0} item
+                      </span>
+                    </h3>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+                      (Sudah dihitung dengan PPN 11%)
                     </span>
-                  </h3>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    Semua harga satuan &amp; total di bawah sudah dihitung dengan PPN 11%
-                  </span>
+                  </div>
+
+                  {onSimulateReturn && (
+                    <button
+                      type="button"
+                      onClick={handleSimulateInvoice}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm group"
+                      title="Masukkan semua barang dari faktur ini ke dalam simulasi retur"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 group-hover:-rotate-45 transition-transform" />
+                      <span>⚡ Simulasikan Retur Faktur Ini</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Items Table with Grid Lines */}
                 <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-950/50 shadow-sm">
                   <div className="overflow-x-auto max-h-[420px]">
-                    <table className="w-full min-w-[980px] text-xs text-left border-collapse border border-slate-200 dark:border-slate-800">
+                    <table className="w-full min-w-[1050px] text-xs text-left border-collapse border border-slate-200 dark:border-slate-800">
                       <thead className="bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 select-none">
                         <tr className="divide-x divide-slate-200 dark:divide-slate-800">
                           <th className="py-2.5 px-3 w-10 text-center">No</th>
@@ -185,6 +238,9 @@ export default function InvoiceModal({
                           <th className="py-2.5 px-3 text-right bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 font-bold whitespace-nowrap min-w-[150px]">
                             Grand Total (+PPN 11%)
                           </th>
+                          {onSimulateReturn && (
+                            <th className="py-2.5 px-2 w-20 text-center">Simulasi</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -227,6 +283,18 @@ export default function InvoiceModal({
                               <td className={`py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap bg-indigo-500/10 dark:bg-indigo-950/30 ${it.total_harga < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-900 dark:text-emerald-300'}`}>
                                 Rp {grandTotalIncPpn.toLocaleString('id-ID')}
                               </td>
+                              {onSimulateReturn && (
+                                <td className="py-2 px-2 text-center whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSimulateSingleItem(it)}
+                                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-lg text-[11px] font-bold transition-all shadow-2xs"
+                                    title="Simulasikan retur untuk obat ini"
+                                  >
+                                    + Retur
+                                  </button>
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
@@ -242,10 +310,11 @@ export default function InvoiceModal({
                           <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 font-extrabold text-sm whitespace-nowrap bg-emerald-500/10 dark:bg-emerald-950/40">
                             Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
                           </td>
+                          {onSimulateReturn && <td className="py-2.5 px-2"></td>}
                         </tr>
                         <tr className="border-t border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
                           <td colSpan={7} className="py-2 px-3 text-right">Grand Total Faktur (Sudah Termasuk PPN 11%):</td>
-                          <td colSpan={2} className="py-2 px-3 text-right font-bold font-mono text-indigo-600 dark:text-indigo-400 text-sm">
+                          <td colSpan={onSimulateReturn ? 3 : 2} className="py-2 px-3 text-right font-bold font-mono text-indigo-600 dark:text-indigo-400 text-sm">
                             Rp {Math.round((data.total_nominal || 0) * 1.11).toLocaleString('id-ID')}
                           </td>
                         </tr>

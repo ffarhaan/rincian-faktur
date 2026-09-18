@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Database, RefreshCw, Sun, Moon } from 'lucide-react';
+import { Database, RefreshCw, Sun, Moon, RotateCcw } from 'lucide-react';
 import OmniSearch from '@/components/OmniSearch';
 import KPICards from '@/components/KPICards';
 import TransactionTable from '@/components/TransactionTable';
@@ -9,6 +9,7 @@ import InvoiceModal from '@/components/InvoiceModal';
 import SOModal from '@/components/SOModal';
 import MedicineModal from '@/components/MedicineModal';
 import CustomerModal from '@/components/CustomerModal';
+import ReturnSimulationModal, { SimulationItem } from '@/components/ReturnSimulationModal';
 
 export default function Home() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -39,6 +40,50 @@ export default function Home() {
   const [activeSO, setActiveSO] = useState<string | null>(null);
   const [activeProduct, setActiveProduct] = useState<string | null>(null);
   const [activeCustomer, setActiveCustomer] = useState<string | null>(null);
+
+  // Return Simulation State
+  const [simulationItems, setSimulationItems] = useState<SimulationItem[]>([]);
+  const [isSimulationOpen, setIsSimulationOpen] = useState(false);
+
+  const handleSimulateReturn = (newItems: SimulationItem[]) => {
+    setSimulationItems((prev) => {
+      const map = new Map<string | number, SimulationItem>();
+      prev.forEach((it) => map.set(it.id, it));
+      newItems.forEach((it) => {
+        if (map.has(it.id)) {
+          const existing = map.get(it.id)!;
+          map.set(it.id, {
+            ...existing,
+            qty_retur: Math.min(existing.qty_beli || 9999, existing.qty_retur + (it.qty_retur || 1)),
+          });
+        } else {
+          map.set(it.id, it);
+        }
+      });
+      return Array.from(map.values());
+    });
+    setIsSimulationOpen(true);
+  };
+
+  const handleUpdateItemQty = (id: string | number, qty: number) => {
+    setSimulationItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, qty_retur: qty } : it))
+    );
+  };
+
+  const handleUpdateItemReason = (id: string | number, reason: string) => {
+    setSimulationItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, alasan: reason } : it))
+    );
+  };
+
+  const handleRemoveSimulationItem = (id: string | number) => {
+    setSimulationItems((prev) => prev.filter((it) => it.id !== id));
+  };
+
+  const handleClearAllSimulation = () => {
+    setSimulationItems([]);
+  };
 
   // Theme initialization from localStorage
   useEffect(() => {
@@ -142,6 +187,22 @@ export default function Home() {
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-2">
+            {/* Simulasi Retur Quick Button in Top Bar */}
+            <button
+              type="button"
+              onClick={() => setIsSimulationOpen(true)}
+              className="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/70 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-xl transition-all shadow-xs flex items-center gap-1.5 text-xs font-bold"
+              title="Buka Simulasi & Estimasi Retur"
+            >
+              <RotateCcw className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              <span>Simulasi Retur</span>
+              {simulationItems.length > 0 && (
+                <span className="px-1.5 py-0.2 text-[10px] font-extrabold bg-rose-600 text-white rounded-full">
+                  {simulationItems.length}
+                </span>
+              )}
+            </button>
+
             {/* Theme Toggle Button */}
             {mounted && (
               <button
@@ -230,6 +291,7 @@ export default function Home() {
             onSelectSO={(so) => setActiveSO(so)}
             onSelectProduct={(prod) => setActiveProduct(prod)}
             onSelectCustomer={(cust) => setActiveCustomer(cust)}
+            onSimulateReturn={handleSimulateReturn}
           />
         </section>
       </div>
@@ -243,6 +305,7 @@ export default function Home() {
           onSelectCustomer={(cust) => { setActiveInvoice(null); setActiveCustomer(cust); }}
           onSelectProduct={(prod) => { setActiveInvoice(null); setActiveProduct(prod); }}
           onSelectInvoice={(inv) => setActiveInvoice(inv)}
+          onSimulateReturn={handleSimulateReturn}
         />
       )}
 
@@ -273,8 +336,32 @@ export default function Home() {
           onSelectInvoice={(inv) => { setActiveCustomer(null); setActiveInvoice(inv); }}
           onSelectProduct={(prod) => { setActiveCustomer(null); setActiveProduct(prod); }}
           onSelectSO={(so) => { setActiveCustomer(null); setActiveSO(so); }}
+          onSimulateReturn={handleSimulateReturn}
         />
       )}
+
+      {/* Return Simulation Modal */}
+      <ReturnSimulationModal
+        isOpen={isSimulationOpen}
+        onClose={() => setIsSimulationOpen(false)}
+        items={simulationItems}
+        onUpdateItemQty={handleUpdateItemQty}
+        onUpdateItemReason={handleUpdateItemReason}
+        onRemoveItem={handleRemoveSimulationItem}
+        onClearAll={handleClearAllSimulation}
+        onSelectInvoice={(inv) => {
+          setIsSimulationOpen(false);
+          setActiveInvoice(inv);
+        }}
+        onSelectProduct={(prod) => {
+          setIsSimulationOpen(false);
+          setActiveProduct(prod);
+        }}
+        onSelectCustomer={(cust) => {
+          setIsSimulationOpen(false);
+          setActiveCustomer(cust);
+        }}
+      />
     </main>
   );
 }
