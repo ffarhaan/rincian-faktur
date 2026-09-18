@@ -44,6 +44,8 @@ export default function Home() {
   // Return Simulation State
   const [simulationItems, setSimulationItems] = useState<SimulationItem[]>([]);
   const [isSimulationOpen, setIsSimulationOpen] = useState(false);
+  const [quickReturInvoice, setQuickReturInvoice] = useState('');
+  const [loadingQuickRetur, setLoadingQuickRetur] = useState(false);
 
   const handleSimulateReturn = (newItems: SimulationItem[]) => {
     setSimulationItems((prev) => {
@@ -63,6 +65,49 @@ export default function Home() {
       return Array.from(map.values());
     });
     setIsSimulationOpen(true);
+  };
+
+  const handleSimulateInvoiceByNumber = async (invNumber: string) => {
+    if (!invNumber || !invNumber.trim()) return;
+    setLoadingQuickRetur(true);
+    try {
+      const res = await fetch(`/api/faktur/${encodeURIComponent(invNumber.trim())}`);
+      const data = await res.json();
+      if (data && data.items && data.items.length > 0) {
+        const simItems: SimulationItem[] = data.items.map((it: any) => ({
+          id: it.id || `${data.nomor_faktur}-${it.kode_barang || it.nama_barang}`,
+          nomor_faktur: data.nomor_faktur,
+          tanggal: data.tanggal,
+          nama_pelanggan: data.nama_pelanggan,
+          kode_barang: it.kode_barang,
+          nama_barang: it.nama_barang,
+          satuan: it.satuan,
+          harga_satuan: Number(it.harga_satuan) || 0,
+          qty_beli: Math.abs(Number(it.kuantitas) || 0),
+          qty_retur: 1,
+          alasan: '',
+        }));
+        handleSimulateReturn(simItems);
+        setQuickReturInvoice('');
+      } else {
+        // Fallback open with basic item
+        handleSimulateReturn([
+          {
+            id: `inv-${invNumber}`,
+            nomor_faktur: invNumber.trim(),
+            nama_barang: `Barang Faktur ${invNumber.trim()}`,
+            harga_satuan: 0,
+            qty_beli: 1,
+            qty_retur: 1,
+            alasan: '',
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error('Error fetching invoice for return simulation:', err);
+    } finally {
+      setLoadingQuickRetur(false);
+    }
   };
 
   const handleUpdateItemQty = (id: string | number, qty: number) => {
@@ -238,21 +283,75 @@ export default function Home() {
 
       {/* Main Container */}
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 flex-1 flex flex-col">
-        {/* Omnibar Universal Search */}
-        <section className="py-2 space-y-2">
+        {/* Omnibar Universal Search & Quick Retur Bar */}
+        <section className="py-2 space-y-2.5">
           <OmniSearch
             onSelectInvoice={(inv) => setActiveInvoice(inv)}
             onSelectSO={(so) => setActiveSO(so)}
             onSelectProduct={(prod) => setActiveProduct(prod)}
             onSelectCustomer={(cust) => setActiveCustomer(cust)}
+            onSimulateInvoiceReturn={handleSimulateInvoiceByNumber}
           />
 
-          {/* Quick Helper Text Di Bawah Pencarian */}
-          <div className="flex items-center justify-center max-w-2xl mx-auto px-2">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <span>💡</span>
-              <span>Ketik No. Faktur / Apotek / Obat di atas untuk langsung membuka detail &amp; link</span>
-            </span>
+          {/* Quick Retur by Invoice Action Bar di Bawah Pencarian */}
+          <div className="bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 p-2.5 sm:p-3 rounded-2xl shadow-xs max-w-2xl mx-auto w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-rose-600 text-white rounded-lg flex-shrink-0">
+                <RotateCcw className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                  <span>⚡ Quick Retur per Nomor Faktur:</span>
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                  Ketik No. INV untuk langsung memunculkan semua barang &amp; harga (+PPN 11%)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-1 max-w-sm sm:justify-end">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={quickReturInvoice}
+                  onChange={(e) => setQuickReturInvoice(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && quickReturInvoice.trim()) {
+                      handleSimulateInvoiceByNumber(quickReturInvoice.trim());
+                    }
+                  }}
+                  placeholder="Ketik No. Faktur (INV/...)..."
+                  className="w-full pl-3 pr-7 py-1.5 text-xs font-mono bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20 shadow-xs"
+                />
+                {quickReturInvoice && (
+                  <button
+                    onClick={() => setQuickReturInvoice('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (quickReturInvoice.trim()) {
+                    handleSimulateInvoiceByNumber(quickReturInvoice.trim());
+                  } else if (tableData.rows.length > 0) {
+                    handleSimulateInvoiceByNumber(tableData.rows[0].nomor_faktur);
+                  } else {
+                    setIsSimulationOpen(true);
+                  }
+                }}
+                disabled={loadingQuickRetur}
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs flex-shrink-0 disabled:opacity-50"
+                title="Langsung tampilkan seluruh barang dari faktur ini untuk simulasi retur"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${loadingQuickRetur ? 'animate-spin' : ''}`} />
+                <span>{loadingQuickRetur ? 'Memuat...' : 'Simulasi'}</span>
+              </button>
+            </div>
           </div>
         </section>
 
