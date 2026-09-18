@@ -56,10 +56,13 @@ export default function Home() {
           const existing = map.get(it.id)!;
           map.set(it.id, {
             ...existing,
-            qty_retur: Math.min(existing.qty_beli || 9999, existing.qty_retur + (it.qty_retur || 1)),
+            qty_retur: it.qty_retur !== undefined ? it.qty_retur : existing.qty_retur,
           });
         } else {
-          map.set(it.id, it);
+          map.set(it.id, {
+            ...it,
+            qty_retur: it.qty_retur !== undefined ? it.qty_retur : 0,
+          });
         }
       });
       return Array.from(map.values());
@@ -84,7 +87,7 @@ export default function Home() {
           satuan: it.satuan,
           harga_satuan: Number(it.harga_satuan) || 0,
           qty_beli: Math.abs(Number(it.kuantitas) || 0),
-          qty_retur: 1,
+          qty_retur: 0,
           alasan: '',
         }));
         handleSimulateReturn(simItems);
@@ -98,13 +101,13 @@ export default function Home() {
             nama_barang: `Barang Faktur ${invNumber.trim()}`,
             harga_satuan: 0,
             qty_beli: 1,
-            qty_retur: 1,
+            qty_retur: 0,
             alasan: '',
           },
         ]);
       }
     } catch (err) {
-      console.error('Error fetching invoice for return simulation:', err);
+      console.error('Error fetching invoice for return:', err);
     } finally {
       setLoadingQuickRetur(false);
     }
@@ -293,24 +296,24 @@ export default function Home() {
             onSimulateInvoiceReturn={handleSimulateInvoiceByNumber}
           />
 
-          {/* Quick Retur by Invoice Action Bar di Bawah Pencarian */}
-          <div className="bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 p-2.5 sm:p-3 rounded-2xl shadow-xs max-w-2xl mx-auto w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-rose-600 text-white rounded-lg flex-shrink-0">
+          {/* Quick Retur by Invoice Action Bar */}
+          <div className="bg-white dark:bg-slate-900 border border-rose-200/70 dark:border-rose-900/50 p-2.5 sm:p-3 rounded-2xl shadow-xs max-w-4xl mx-auto w-full flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 flex-shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold flex-shrink-0">
                 <RotateCcw className="w-4 h-4" />
               </div>
-              <div className="min-w-0">
+              <div>
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                  <span>⚡ Buat Retur Cepat per Nomor Faktur:</span>
+                  <span>⚡ Buat Retur Cepat per Nomor Faktur</span>
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
-                  Ketik No. INV untuk langsung memuat semua barang &amp; menerbitkan dokumen retur (+PPN 11%)
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                  Ketik No. Faktur untuk memuat barang retur
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 flex-1 max-w-sm sm:justify-end">
-              <div className="relative flex-1">
+            <div className="flex items-center gap-2 flex-1 w-full max-w-xl">
+              <div className="relative flex-1 min-w-0">
                 <input
                   type="text"
                   value={quickReturInvoice}
@@ -320,13 +323,14 @@ export default function Home() {
                       handleSimulateInvoiceByNumber(quickReturInvoice.trim());
                     }
                   }}
-                  placeholder="Ketik No. Faktur (INV/...)..."
-                  className="w-full pl-3 pr-7 py-1.5 text-xs font-mono bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20 shadow-xs"
+                  placeholder="Ketik No. Faktur (cth: INV/2026/08/59897)..."
+                  className="w-full pl-3.5 pr-8 py-2 text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-rose-500/20 transition-all shadow-inner"
                 />
                 {quickReturInvoice && (
                   <button
+                    type="button"
                     onClick={() => setQuickReturInvoice('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold p-0.5"
                   >
                     ×
                   </button>
@@ -338,18 +342,16 @@ export default function Home() {
                 onClick={() => {
                   if (quickReturInvoice.trim()) {
                     handleSimulateInvoiceByNumber(quickReturInvoice.trim());
-                  } else if (tableData.rows.length > 0) {
-                    handleSimulateInvoiceByNumber(tableData.rows[0].nomor_faktur);
                   } else {
                     setIsSimulationOpen(true);
                   }
                 }}
                 disabled={loadingQuickRetur}
-                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs flex-shrink-0 disabled:opacity-50"
-                title="Langsung tampilkan seluruh barang dari faktur ini untuk membuat dokumen retur"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs flex-shrink-0 disabled:opacity-50"
+                title="Muat seluruh barang dari faktur ini untuk membuat dokumen retur"
               >
                 <RotateCcw className={`w-3.5 h-3.5 ${loadingQuickRetur ? 'animate-spin' : ''}`} />
-                <span>{loadingQuickRetur ? 'Memuat...' : 'Buat Retur'}</span>
+                <span>{loadingQuickRetur ? 'Memuat...' : quickReturInvoice.trim() ? 'Muat Retur' : 'Buka Retur'}</span>
               </button>
             </div>
           </div>

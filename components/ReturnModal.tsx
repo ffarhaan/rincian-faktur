@@ -183,8 +183,9 @@ export default function ReturnModal({
 
   if (!isOpen) return null;
 
-  // Real-time calculations
-  const totalItemsCount = items.length;
+  // Real-time calculations: count items that have Qty Retur > 0
+  const activeReturnItems = items.filter((it) => (Number(it.qty_retur) || 0) > 0);
+  const totalItemsCount = activeReturnItems.length;
   const totalPhysicalQty = items.reduce((sum, it) => sum + (Number(it.qty_retur) || 0), 0);
   const totalDpp = items.reduce((sum, it) => {
     const unitDpp = Number(it.harga_satuan) || 0;
@@ -205,7 +206,7 @@ export default function ReturnModal({
 
   const addItemHandler = onAddReturnItems || onAddSimulationItems;
 
-  // Fetch invoice items and add to return list
+  // Fetch invoice items and add to return list (default Qty Retur = 0, user decides)
   const handleSelectInvoiceToLoad = async (invNumber: string) => {
     if (!invNumber || !invNumber.trim()) return;
     setIsLoadingInvoiceData(true);
@@ -229,7 +230,7 @@ export default function ReturnModal({
               satuan: it.satuan,
               harga_satuan: Number(it.harga_satuan) || 0,
               qty_beli: Math.abs(Number(it.kuantitas) || 0),
-              qty_retur: 1,
+              qty_retur: 0,
               alasan: '',
             }));
             addItemHandler(returnItems);
@@ -258,9 +259,32 @@ export default function ReturnModal({
     }
   };
 
+  // Quick helper: Set all items Qty to full Qty Beli
+  const handleSetAllQtyBeli = () => {
+    items.forEach((it) => {
+      onUpdateItemQty(it.id, Math.max(1, it.qty_beli || 1));
+    });
+    setNotificationMsg('✓ Seluruh barang telah disetel sesuai Qty Beli.');
+    setTimeout(() => setNotificationMsg(null), 3000);
+  };
+
+  // Quick helper: Reset all Qty Retur to 0
+  const handleResetAllQtyZero = () => {
+    items.forEach((it) => {
+      onUpdateItemQty(it.id, 0);
+    });
+    setNotificationMsg('✓ Seluruh Qty Retur telah dikosongkan (0).');
+    setTimeout(() => setNotificationMsg(null), 3000);
+  };
+
   // Save Return Document permanently to local storage
   const handleSaveDocument = () => {
     if (items.length === 0) return;
+    if (totalItemsCount === 0) {
+      setNotificationMsg('⚠️ Harap isi Qty Retur minimal pada 1 barang sebelum menyimpan.');
+      setTimeout(() => setNotificationMsg(null), 4000);
+      return;
+    }
 
     const doc: SavedReturnDocument = {
       id: `doc-${Date.now()}`,
@@ -315,8 +339,14 @@ export default function ReturnModal({
   // Export to Excel
   const handleExportExcel = () => {
     if (items.length === 0) return;
+    const itemsToExport = items.filter((it) => (Number(it.qty_retur) || 0) > 0);
+    if (itemsToExport.length === 0) {
+      setNotificationMsg('⚠️ Harap isi Qty Retur (minimal 1 barang) sebelum download Excel.');
+      setTimeout(() => setNotificationMsg(null), 4000);
+      return;
+    }
 
-    const exportRows = items.map((it, idx) => {
+    const exportRows = itemsToExport.map((it, idx) => {
       const unitDpp = Number(it.harga_satuan) || 0;
       const unitIncPpn = Math.round(unitDpp * 1.11);
       const qtyRetur = Number(it.qty_retur) || 0;
@@ -350,18 +380,24 @@ export default function ReturnModal({
     XLSX.utils.book_append_sheet(wb, ws, 'Retur_Barang');
     XLSX.writeFile(
       wb,
-      `Surat_Retur_${nomorRetur}_${tanggalRetur}.xlsx`
+      `Dokumen_Retur_${nomorRetur}_${tanggalRetur}.xlsx`
     );
   };
 
   // Copy to WhatsApp text format
   const handleCopySlip = () => {
     if (items.length === 0) return;
+    const itemsToCopy = items.filter((it) => (Number(it.qty_retur) || 0) > 0);
+    if (itemsToCopy.length === 0) {
+      setNotificationMsg('⚠️ Harap isi Qty Retur (minimal 1 barang) terlebih dahulu.');
+      setTimeout(() => setNotificationMsg(null), 4000);
+      return;
+    }
 
     const customerStr = customerNames.length > 0 ? customerNames.map(cleanHtml).join(', ') : '-';
     const invoiceStr = invoiceNumbers.length > 0 ? invoiceNumbers.join(', ') : '-';
 
-    let text = `*📄 SURAT / BUKTI PENGAJUAN RETUR BARANG*\n`;
+    let text = `*📄 DOKUMEN / SURAT RETUR BARANG*\n`;
     text += `*No. Dokumen Retur:* ${nomorRetur}\n`;
     text += `*Tanggal Retur:* ${tanggalRetur}\n`;
     text += `*Apotek / Pelanggan:* ${customerStr}\n`;
@@ -369,7 +405,7 @@ export default function ReturnModal({
     if (catatanRetur) text += `*Catatan:* ${catatanRetur}\n`;
     text += `-------------------------------------------\n`;
 
-    items.forEach((it, idx) => {
+    itemsToCopy.forEach((it, idx) => {
       const unitDpp = Number(it.harga_satuan) || 0;
       const unitIncPpn = Math.round(unitDpp * 1.11);
       const qtyRetur = Number(it.qty_retur) || 0;
@@ -384,10 +420,10 @@ export default function ReturnModal({
     });
 
     text += `-------------------------------------------\n`;
-    text += `*TOTAL JENIS BARANG:* ${totalItemsCount} item (${totalPhysicalQty} Unit Fisik)\n`;
+    text += `*TOTAL JENIS BARANG DIRETUR:* ${totalItemsCount} item (${totalPhysicalQty} Unit Fisik)\n`;
     text += `*TOTAL NILAI RETUR (DPP):* Rp ${Math.round(totalDpp).toLocaleString('id-ID')}\n`;
     text += `*PPN 11% RETUR:* Rp ${totalPpn.toLocaleString('id-ID')}\n`;
-    text += `*GRAND TOTAL PENGEMBALIAN (+PPN 11%):* Rp ${totalGrandRetur.toLocaleString('id-ID')}\n`;
+    text += `*GRAND TOTAL RETUR (+PPN 11%):* Rp ${totalGrandRetur.toLocaleString('id-ID')}\n`;
     text += `\n_Diterbitkan secara resmi via Sistem Database Faktur_`;
 
     navigator.clipboard.writeText(text).then(() => {
@@ -397,6 +433,12 @@ export default function ReturnModal({
   };
 
   const handlePrint = () => {
+    if (items.length === 0) return;
+    if (totalItemsCount === 0) {
+      setNotificationMsg('⚠️ Harap isi Qty Retur (minimal 1 barang) sebelum mencetak surat jalan.');
+      setTimeout(() => setNotificationMsg(null), 4000);
+      return;
+    }
     window.print();
   };
 
@@ -726,9 +768,14 @@ export default function ReturnModal({
                 <span className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 mt-0.5 block">
                   {totalItemsCount}{' '}
                   <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-                    Item ({totalPhysicalQty} Pcs/Box)
+                    Item ({totalPhysicalQty} Unit)
                   </span>
                 </span>
+                {items.length > 0 && totalItemsCount === 0 && (
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 block">
+                    Belum ada Qty yang diisi (Total: {items.length} item faktur)
+                  </span>
+                )}
               </div>
 
               <div className="bg-slate-50 dark:bg-slate-950/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -797,7 +844,28 @@ export default function ReturnModal({
                 {/* Action Toolbar & Table Filter */}
                 <div className="flex flex-wrap items-center gap-2 print:hidden ml-auto">
                   {items.length > 0 && (
-                    <div className="relative min-w-[180px] sm:min-w-[220px]">
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleSetAllQtyBeli}
+                        className="px-2.5 py-1 text-[11px] font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg transition-colors shadow-2xs"
+                        title="Setel kuantitas retur seluruh barang sama dengan Qty Beli"
+                      >
+                        ⚡ Retur Semua Barang
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetAllQtyZero}
+                        className="px-2.5 py-1 text-[11px] font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg transition-colors shadow-2xs"
+                        title="Kosongkan seluruh Qty Retur menjadi 0"
+                      >
+                        🔄 Reset ke 0
+                      </button>
+                    </>
+                  )}
+
+                  {items.length > 0 && (
+                    <div className="relative min-w-[180px] sm:min-w-[200px]">
                       <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
@@ -935,11 +1003,16 @@ export default function ReturnModal({
                           const qtyRetur = Number(it.qty_retur) || 0;
                           const subtotalDpp = Math.round(unitDpp * qtyRetur);
                           const grandTotalRetur = Math.round(subtotalDpp * 1.11);
+                          const isRowActive = qtyRetur > 0;
 
                           return (
                             <tr
                               key={it.id || idx}
-                              className="divide-x divide-slate-200 dark:divide-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850/60 transition-colors"
+                              className={`divide-x divide-slate-200 dark:divide-slate-800 transition-colors ${
+                                isRowActive
+                                  ? 'bg-rose-50/40 dark:bg-rose-950/30'
+                                  : 'hover:bg-slate-50/80 dark:hover:bg-slate-850/40'
+                              } ${!isRowActive ? 'print:hidden' : ''}`}
                             >
                               {/* No */}
                               <td className="py-2 px-3 text-center text-slate-400">{idx + 1}</td>
@@ -984,12 +1057,12 @@ export default function ReturnModal({
                               </td>
 
                               {/* Interactive Qty Retur */}
-                              <td className="py-1.5 px-2 bg-rose-50/50 dark:bg-rose-950/20">
+                              <td className={`py-1.5 px-2 ${isRowActive ? 'bg-rose-50/80 dark:bg-rose-950/50' : 'bg-slate-50/30 dark:bg-slate-900/20'}`}>
                                 <div className="flex items-center justify-center gap-1">
                                   <button
                                     type="button"
-                                    onClick={() => onUpdateItemQty(it.id, Math.max(1, qtyRetur - 1))}
-                                    disabled={qtyRetur <= 1}
+                                    onClick={() => onUpdateItemQty(it.id, Math.max(0, qtyRetur - 1))}
+                                    disabled={qtyRetur <= 0}
                                     className="w-6 h-6 flex items-center justify-center rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors print:hidden"
                                   >
                                     <Minus className="w-3 h-3" />
@@ -997,17 +1070,26 @@ export default function ReturnModal({
 
                                   <input
                                     type="number"
-                                    min={1}
+                                    min={0}
                                     max={Math.max(1, it.qty_beli)}
                                     value={qtyRetur}
                                     onChange={(e) => {
-                                      const val = parseInt(e.target.value, 10);
+                                      const raw = e.target.value;
+                                      if (raw === '') {
+                                        onUpdateItemQty(it.id, 0);
+                                        return;
+                                      }
+                                      const val = parseInt(raw, 10);
                                       if (!isNaN(val)) {
-                                        const clamped = Math.max(1, Math.min(it.qty_beli || 9999, val));
+                                        const clamped = Math.max(0, Math.min(it.qty_beli || 9999, val));
                                         onUpdateItemQty(it.id, clamped);
                                       }
                                     }}
-                                    className="w-14 text-center py-0.5 text-xs font-bold font-mono bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-700/80 rounded text-rose-700 dark:text-rose-300 focus:outline-none focus:ring-1 focus:ring-rose-500 shadow-xs"
+                                    className={`w-14 text-center py-0.5 text-xs font-bold font-mono rounded border transition-all shadow-xs ${
+                                      isRowActive
+                                        ? 'bg-white dark:bg-slate-900 border-rose-400 dark:border-rose-600 text-rose-700 dark:text-rose-300 focus:ring-1 focus:ring-rose-500'
+                                        : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-400 focus:border-rose-400 focus:text-slate-800 dark:focus:text-slate-100'
+                                    }`}
                                   />
 
                                   <button
@@ -1039,12 +1121,12 @@ export default function ReturnModal({
                               </td>
 
                               {/* Subtotal Retur (DPP) */}
-                              <td className="py-2 px-3 text-right font-mono font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                              <td className={`py-2 px-3 text-right font-mono whitespace-nowrap ${isRowActive ? 'font-semibold text-slate-700 dark:text-slate-300' : 'text-slate-400'}`}>
                                 Rp {subtotalDpp.toLocaleString('id-ID')}
                               </td>
 
                               {/* Grand Total Retur (+PPN 11%) */}
-                              <td className="py-2 px-3 text-right bg-rose-500/10 dark:bg-rose-950/30 font-mono font-bold text-rose-700 dark:text-rose-300 whitespace-nowrap">
+                              <td className={`py-2 px-3 text-right font-mono font-bold whitespace-nowrap ${isRowActive ? 'bg-rose-500/10 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300' : 'text-slate-400'}`}>
                                 Rp {grandTotalRetur.toLocaleString('id-ID')}
                               </td>
 

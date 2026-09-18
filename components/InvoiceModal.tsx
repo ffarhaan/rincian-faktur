@@ -58,7 +58,7 @@ export default function InvoiceModal({
       satuan: it.satuan,
       harga_satuan: Number(it.harga_satuan) || 0,
       qty_beli: Math.abs(Number(it.kuantitas) || 0),
-      qty_retur: 1,
+      qty_retur: 0,
       alasan: '',
     }));
     onSimulateReturn(simItems);
