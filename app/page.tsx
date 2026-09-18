@@ -448,6 +448,8 @@ export default function Home() {
         onUpdateItemReason={handleUpdateItemReason}
         onRemoveItem={handleRemoveSimulationItem}
         onClearAll={handleClearAllSimulation}
+        onAddSimulationItems={handleSimulateReturn}
+        onLoadInvoice={handleSimulateInvoiceByNumber}
         onSelectInvoice={(inv) => {
           setIsSimulationOpen(false);
           setActiveInvoice(inv);
