@@ -390,7 +390,6 @@ export default function Home() {
             onSelectSO={(so) => setActiveSO(so)}
             onSelectProduct={(prod) => setActiveProduct(prod)}
             onSelectCustomer={(cust) => setActiveCustomer(cust)}
-            onSimulateReturn={handleSimulateReturn}
           />
         </section>
       </div>

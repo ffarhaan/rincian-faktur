@@ -35,7 +35,6 @@ interface TransactionTableProps {
   onSelectSO: (so: string) => void;
   onSelectProduct: (prod: string) => void;
   onSelectCustomer: (cust: string) => void;
-  onSimulateReturn?: (items: any[]) => void;
 }
 
 function cleanHtml(str: string): string {
@@ -71,7 +70,6 @@ export default function TransactionTable({
   onSelectSO,
   onSelectProduct,
   onSelectCustomer,
-  onSimulateReturn,
 }: TransactionTableProps) {
   const handleExport = () => {
     if (rows.length === 0) return;
@@ -307,22 +305,19 @@ export default function TransactionTable({
                   Grand Total (+PPN 11%)
                 </th>
                 <th className="py-3 px-3 text-center min-w-[65px]">Kat</th>
-                {onSimulateReturn && (
-                  <th className="py-3 px-2 text-center min-w-[75px]">Simulasi</th>
-                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={onSimulateReturn ? 13 : 12} className="py-16 text-center text-slate-400">
+                  <td colSpan={12} className="py-16 text-center text-slate-400">
                     <div className="inline-block animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full mb-2" />
                     <p className="text-xs">Memuat data dari database...</p>
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={onSimulateReturn ? 13 : 12} className="py-16 text-center text-slate-400 text-xs">
+                  <td colSpan={12} className="py-16 text-center text-slate-400 text-xs">
                     Tidak ada data transaksi yang ditemukan.
                   </td>
                 </tr>
@@ -433,36 +428,6 @@ export default function TransactionTable({
                           {r.category || '3P'}
                         </span>
                       </td>
-
-                      {/* Simulasi Action */}
-                      {onSimulateReturn && (
-                        <td className="py-2 px-2 text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onSimulateReturn([
-                                {
-                                  id: r.id,
-                                  nomor_faktur: r.nomor_faktur,
-                                  tanggal: r.tanggal,
-                                  nama_pelanggan: r.nama_pelanggan,
-                                  kode_barang: r.kode_barang,
-                                  nama_barang: r.nama_barang,
-                                  satuan: r.satuan,
-                                  harga_satuan: Number(r.harga_satuan) || 0,
-                                  qty_beli: Math.abs(Number(r.kuantitas) || 0),
-                                  qty_retur: 1,
-                                  alasan: '',
-                                },
-                              ])
-                            }
-                            className="px-2 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-lg text-[11px] font-bold transition-all shadow-2xs"
-                            title="Simulasikan retur transaksi ini"
-                          >
-                            + Retur
-                          </button>
-                        </td>
-                      )}
                     </tr>
                   );
                 })
