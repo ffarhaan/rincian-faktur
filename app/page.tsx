@@ -31,6 +31,7 @@ export default function Home() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [tableSearch, setTableSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('tanggal');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -41,11 +42,21 @@ export default function Home() {
   const [activeProduct, setActiveProduct] = useState<string | null>(null);
   const [activeCustomer, setActiveCustomer] = useState<string | null>(null);
 
-  // Return Simulation State
+  // Return Document State
   const [simulationItems, setSimulationItems] = useState<SimulationItem[]>([]);
   const [isSimulationOpen, setIsSimulationOpen] = useState(false);
+  const [returnModalTab, setReturnModalTab] = useState<'form' | 'history' | 'db_returns'>('form');
   const [quickReturInvoice, setQuickReturInvoice] = useState('');
   const [loadingQuickRetur, setLoadingQuickRetur] = useState(false);
+
+  // Debounce search query to eliminate lag and infinite spinners
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(tableSearch);
+      setPage(1);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [tableSearch]);
 
   const handleSimulateReturn = (newItems: SimulationItem[]) => {
     setSimulationItems((prev) => {
@@ -67,6 +78,7 @@ export default function Home() {
       });
       return Array.from(map.values());
     });
+    setReturnModalTab('form');
     setIsSimulationOpen(true);
   };
 
@@ -167,40 +179,44 @@ export default function Home() {
     }
   }, []);
 
-  // Fetch Table Transactions
-  const fetchTransactions = useCallback(async () => {
+  // Fetch Table Transactions with AbortController for super responsive queries
+  const fetchTransactions = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (selectedYear !== 'all') params.set('tahun', selectedYear);
       if (filterCategory !== 'all') params.set('category', filterCategory);
       if (filterType !== 'all') params.set('isRetur', filterType);
-      if (tableSearch.trim()) params.set('search', tableSearch.trim());
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
       params.set('page', String(page));
       params.set('limit', '50');
       params.set('sortBy', sortBy);
       params.set('sortOrder', sortOrder);
 
-      const res = await fetch(`/api/transactions?${params.toString()}`);
+      const res = await fetch(`/api/transactions?${params.toString()}`, { signal });
       const data = await res.json();
       setTableData({
         rows: data.rows || [],
         total: data.total || 0,
         totalPages: data.totalPages || 0,
       });
-    } catch (err) {
-      console.error('Error fetching transactions:', err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('Error fetching transactions:', err);
+      }
     } finally {
       setLoading(false);
     }
-  }, [selectedYear, filterCategory, filterType, tableSearch, page, sortBy, sortOrder]);
+  }, [selectedYear, filterCategory, filterType, debouncedSearch, page, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchKPIs();
   }, [fetchKPIs]);
 
   useEffect(() => {
-    fetchTransactions();
+    const controller = new AbortController();
+    fetchTransactions(controller.signal);
+    return () => controller.abort();
   }, [fetchTransactions]);
 
   const handleSortChange = (col: string) => {
@@ -229,28 +245,12 @@ export default function Home() {
                   2024 - 2026
                 </span>
               </h1>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Relational Sales & Retur Explorer</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Relational Sales &amp; Retur Explorer</p>
             </div>
           </div>
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-2">
-            {/* Retur Barang Quick Button in Top Bar */}
-            <button
-              type="button"
-              onClick={() => setIsSimulationOpen(true)}
-              className="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/70 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80 rounded-xl transition-all shadow-xs flex items-center gap-1.5 text-xs font-bold"
-              title="Buka Formulir & Dokumen Retur Barang"
-            >
-              <RotateCcw className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-              <span>Retur Barang</span>
-              {simulationItems.length > 0 && (
-                <span className="px-1.5 py-0.2 text-[10px] font-extrabold bg-rose-600 text-white rounded-full">
-                  {simulationItems.length}
-                </span>
-              )}
-            </button>
-
             {/* Theme Toggle Button */}
             {mounted && (
               <button
@@ -337,12 +337,28 @@ export default function Home() {
                 )}
               </div>
 
+              {/* View Returned Invoices List */}
+              <button
+                type="button"
+                onClick={() => {
+                  setReturnModalTab('db_returns');
+                  setIsSimulationOpen(true);
+                }}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs flex-shrink-0"
+                title="Lihat daftar faktur yang pernah diretur di database"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+                <span className="hidden sm:inline">Daftar Faktur Retur</span>
+                <span className="sm:hidden">Daftar Retur</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
                   if (quickReturInvoice.trim()) {
                     handleSimulateInvoiceByNumber(quickReturInvoice.trim());
                   } else {
+                    setReturnModalTab('form');
                     setIsSimulationOpen(true);
                   }
                 }}
@@ -351,7 +367,7 @@ export default function Home() {
                 title="Muat seluruh barang dari faktur ini untuk membuat dokumen retur"
               >
                 <RotateCcw className={`w-3.5 h-3.5 ${loadingQuickRetur ? 'animate-spin' : ''}`} />
-                <span>{loadingQuickRetur ? 'Memuat...' : quickReturInvoice.trim() ? 'Muat Retur' : 'Buka Retur'}</span>
+                <span>{loadingQuickRetur ? 'Memuat...' : quickReturInvoice.trim() ? 'Muat Retur' : 'Buka Form'}</span>
               </button>
             </div>
           </div>
@@ -445,6 +461,7 @@ export default function Home() {
         isOpen={isSimulationOpen}
         onClose={() => setIsSimulationOpen(false)}
         items={simulationItems}
+        initialTab={returnModalTab}
         onUpdateItemQty={handleUpdateItemQty}
         onUpdateItemReason={handleUpdateItemReason}
         onRemoveItem={handleRemoveSimulationItem}

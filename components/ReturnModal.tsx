@@ -63,6 +63,7 @@ interface ReturnModalProps {
   isOpen: boolean;
   onClose: () => void;
   items: ReturnItem[];
+  initialTab?: 'form' | 'history' | 'db_returns';
   onUpdateItemQty: (id: string | number, qty: number) => void;
   onUpdateItemReason: (id: string | number, reason: string) => void;
   onRemoveItem: (id: string | number) => void;
@@ -98,6 +99,7 @@ export default function ReturnModal({
   isOpen,
   onClose,
   items,
+  initialTab = 'form',
   onUpdateItemQty,
   onUpdateItemReason,
   onRemoveItem,
@@ -111,8 +113,13 @@ export default function ReturnModal({
 }: ReturnModalProps) {
   const [copied, setCopied] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<'form' | 'history'>('form');
+  const [activeTab, setActiveTab] = useState<'form' | 'history' | 'db_returns'>(initialTab);
   
+  // Database Returned Invoices State
+  const [dbReturList, setDbReturList] = useState<any[]>([]);
+  const [loadingDbRetur, setLoadingDbRetur] = useState(false);
+  const [dbReturFilter, setDbReturFilter] = useState('');
+
   // Document metadata state
   const [nomorRetur, setNomorRetur] = useState(generateReturnDocNumber());
   const [tanggalRetur, setTanggalRetur] = useState(new Date().toISOString().slice(0, 10));
@@ -130,6 +137,26 @@ export default function ReturnModal({
 
   // Saved Returns History State
   const [savedReturnsList, setSavedReturnsList] = useState<SavedReturnDocument[]>([]);
+
+  const fetchDbReturns = async () => {
+    setLoadingDbRetur(true);
+    try {
+      const res = await fetch('/api/faktur-retur?limit=100');
+      const data = await res.json();
+      setDbReturList(data.invoices || []);
+    } catch (err) {
+      console.error('Error fetching return invoices:', err);
+    } finally {
+      setLoadingDbRetur(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialTab) setActiveTab(initialTab);
+      fetchDbReturns();
+    }
+  }, [isOpen, initialTab]);
 
   // Load saved returns from localStorage
   useEffect(() => {
@@ -483,7 +510,7 @@ export default function ReturnModal({
           </div>
 
           <div className="flex items-center gap-2 print:hidden">
-            {/* Tab switch: Formulir vs Arsip Retur */}
+            {/* Tab switch: Formulir vs Faktur Retur DB vs Arsip Retur */}
             <div className="flex items-center bg-slate-200/80 dark:bg-slate-800 p-0.5 rounded-xl text-xs font-medium mr-2">
               <button
                 type="button"
@@ -499,6 +526,18 @@ export default function ReturnModal({
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab('db_returns')}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                  activeTab === 'db_returns'
+                    ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Faktur Retur DB ({dbReturList.length})</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab('history')}
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
                   activeTab === 'history'
@@ -507,7 +546,7 @@ export default function ReturnModal({
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
-                <span>Arsip Retur ({savedReturnsList.length})</span>
+                <span>Arsip Dokumen ({savedReturnsList.length})</span>
               </button>
             </div>
 
@@ -530,6 +569,124 @@ export default function ReturnModal({
             </button>
           </div>
         </div>
+
+        {/* Tab 3: Daftar Faktur yang Pernah Diretur di Database */}
+        {activeTab === 'db_returns' && (
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-rose-50/50 dark:bg-rose-950/20 p-3.5 rounded-2xl border border-rose-200 dark:border-rose-900/60">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <span>Daftar Faktur yang Tercatat Retur di Database</span>
+                  <span className="px-2 py-0.5 text-xs font-extrabold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 rounded border border-rose-200 dark:border-rose-800">
+                    {dbReturList.length} Faktur
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Klik <strong>&quot;Muat ke Form&quot;</strong> atau <strong>&quot;Rincian&quot;</strong> untuk melihat detail barang retur.
+                </p>
+              </div>
+
+              <div className="relative min-w-[240px]">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={dbReturFilter}
+                  onChange={(e) => setDbReturFilter(e.target.value)}
+                  placeholder="Cari No. Faktur / Apotek..."
+                  className="w-full pl-8 pr-7 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-rose-500"
+                />
+                {dbReturFilter && (
+                  <button
+                    type="button"
+                    onClick={() => setDbReturFilter('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {loadingDbRetur ? (
+              <div className="py-16 text-center space-y-2">
+                <Loader2 className="w-6 h-6 animate-spin text-rose-500 mx-auto" />
+                <p className="text-xs text-slate-500">Memuat daftar faktur retur dari database...</p>
+              </div>
+            ) : dbReturList.length === 0 ? (
+              <div className="py-16 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-950/20 p-6 space-y-2">
+                <RotateCcw className="w-8 h-8 text-slate-400 mx-auto" />
+                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">Belum Ada Faktur Retur Terdeteksi</h4>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {dbReturList
+                  .filter((inv) => {
+                    if (!dbReturFilter.trim()) return true;
+                    const q = dbReturFilter.toLowerCase();
+                    return (
+                      (inv.nomor_faktur && inv.nomor_faktur.toLowerCase().includes(q)) ||
+                      (inv.nama_pelanggan && inv.nama_pelanggan.toLowerCase().includes(q)) ||
+                      (inv.tanggal && inv.tanggal.includes(q))
+                    );
+                  })
+                  .map((inv) => (
+                    <div
+                      key={inv.nomor_faktur}
+                      className="p-3.5 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-rose-300 dark:hover:border-rose-700 rounded-2xl shadow-xs transition-all flex flex-col justify-between group"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="font-mono font-bold text-xs text-rose-600 dark:text-rose-400">
+                              {inv.nomor_faktur}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block font-normal mt-0.5">
+                              📅 {inv.tanggal || '-'} &bull; {inv.item_count} item
+                            </span>
+                          </div>
+                          <span className="px-1.5 py-0.5 text-[9px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 rounded border border-rose-200 dark:border-rose-800">
+                            RETUR
+                          </span>
+                        </div>
+
+                        <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-2">
+                          🏥 {cleanHtml(inv.nama_pelanggan || '-')}
+                        </div>
+                      </div>
+
+                      <div className="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <span className="font-mono font-bold text-xs text-rose-600 dark:text-rose-400">
+                          Rp {Math.abs(Number(inv.total_nominal) || 0).toLocaleString('id-ID')}
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => onSelectInvoice && onSelectInvoice(inv.nomor_faktur)}
+                            className="px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-bold transition-colors"
+                            title="Lihat rincian faktur ini"
+                          >
+                            Rincian
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleSelectInvoiceToLoad(inv.nomor_faktur);
+                              setActiveTab('form');
+                            }}
+                            className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-bold transition-colors shadow-2xs flex items-center gap-1"
+                            title="Muat barang faktur ini ke form retur"
+                          >
+                            <span>⚡ Muat</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tab 2: Arsip Dokumen Retur Sebelumnya */}
         {activeTab === 'history' && (
