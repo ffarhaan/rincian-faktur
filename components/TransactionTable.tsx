@@ -189,32 +189,6 @@ export default function TransactionTable({
               </div>
             </div>
           </div>
-
-          {/* Quick Invoice Direct Link Bar beneath search */}
-          {rows.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/60 text-xs">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>Faktur Terkait (Klik langsung buka):</span>
-                </span>
-                {Array.from(new Set(rows.map((r) => r.nomor_faktur).filter(Boolean)))
-                  .slice(0, 5)
-                  .map((inv) => (
-                    <button
-                      key={inv}
-                      type="button"
-                      onClick={() => onSelectInvoice(inv)}
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-mono font-bold bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 border border-indigo-200 dark:border-indigo-800 rounded-lg shadow-xs hover:border-indigo-400 transition-all group"
-                      title={`Buka detail faktur ${inv}`}
-                    >
-                      <span>{inv}</span>
-                      <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                    </button>
-                  ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Scroll Helper Bar */}
